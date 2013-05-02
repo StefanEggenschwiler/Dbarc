@@ -1,0 +1,923 @@
+\documentclass[10pt]{article}
+
+%Math
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsthm}
+\usepackage{ulem}
+\usepackage{stmaryrd} %f\UTF{00FC}r Blitz!
+
+%PageStyle
+\usepackage[ngerman]{babel} % deutsche Silbentrennung
+\usepackage[utf8]{inputenc}
+\usepackage{fancyhdr, graphicx}
+\usepackage[scaled=0.92]{helvet}
+\usepackage{enumitem}
+\usepackage{parskip}
+\usepackage[a4paper,top=2cm]{geometry}
+\setlength{\textwidth}{17cm}
+\setlength{\oddsidemargin}{-0.5cm}
+
+% Shortcommands
+\newcommand{\Bold}[1]{\textbf{#1}} %Boldface
+\newcommand{\Kursiv}[1]{\textit{#1}} %Italic
+\newcommand{\T}[1]{\text{#1}} %Textmode
+\newcommand{\Nicht}[1]{\T{\sout{$ #1 $}}} %Streicht Shit durch
+
+%Arrows
+\newcommand{\lra}{\leftrightarrow}
+\newcommand{\ra}{\rightarrow}
+\newcommand{\la}{\leftarrow}
+\newcommand{\lral}{\longleftrightarrow}
+\newcommand{\ral}{\longrightarrow}
+\newcommand{\lal}{\longleftarrow}
+\newcommand{\Lra}{\Leftrightarrow}
+\newcommand{\Ra}{\Rightarrow}
+\newcommand{\La}{\Leftarrow}
+\newcommand{\Lral}{\Longleftrightarrow}
+\newcommand{\Ral}{\Longrightarrow}
+\newcommand{\Lal}{\Longleftarrow}
+
+% Code listenings
+\usepackage{color}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{caption}
+\DeclareCaptionFont{white}{\color{black}}
+\DeclareCaptionFormat{listing}{\colorbox{white}{\parbox{\textwidth}{#1#2#3}}}
+\captionsetup[lstlisting]{format=listing,labelfont=white,textfont=white,font=bf}
+
+
+\lstdefinestyle{sqlNoTitle}{
+   language=SQL,
+   basicstyle=\footnotesize\ttfamily, % Standardschrift
+   backgroundcolor=\color[RGB]{255,255,0}, % Hintergrundfarbe
+   numbers=left, % Ort der Zeilennummern
+   numberstyle=\tiny, % Stil der Zeilennummern
+   stepnumber=1, % Abstand zwischen den Zeilennummern
+   numbersep=5pt, % Abstand der Nummern zum Text
+   tabsize=2, % Groesse von Tabs
+   extendedchars=true, %
+   breaklines=true, % Zeilen werden Umgebrochen
+   frame=trbl, % Rahmen
+   stringstyle=\color[RGB]{42,0,255} \ttfamily, % Farbe der String
+   keywordstyle=\color[RGB]{127,0,85} \bfseries, % Farbe der Keywords
+   commentstyle=\color[RGB]{63,127,95} \ttfamily, % Farbe des Kommentars
+   showspaces=false, % Leerzeichen anzeigen ?
+   showtabs=false, % Tabs anzeigen ?
+   xleftmargin=17pt,
+   framexleftmargin=17pt,
+   framexrightmargin=5pt,
+   framexbottommargin=5pt,
+   framextopmargin=5pt,
+   showstringspaces=false, % Leerzeichen in Strings anzeigen ?
+}
+
+
+\lstdefinestyle{sql}{
+   style=sqlNoTitle,
+   % title=SQL-Query
+}
+
+\lstdefinestyle{queryexecutionplan}{
+  basicstyle=\footnotesize\ttfamily, % Standardschrift
+  backgroundcolor=\color[RGB]{238,233,233}, % Hintergrundfarbe
+  frame=trbl, % Rahmen
+  %title=Ausführungsplan
+}
+
+%Config
+\renewcommand{\headrulewidth}{0pt}
+\setlength{\headheight}{15.2pt}
+
+%Metadata
+\fancyfoot[C]{}
+\title{
+\vspace{4cm}
+\huge{Datenbank Architektur für Fortgeschrittene}\\
+\vspace{0.2cm}
+\Large{Ausarbeitung 1: Anfrageverarbeitung}\\
+}
+\author{Daniel Gürber & Stefan Eggenschwiler}
+\date{02.05.2013}
+
+% hier beginnt das Dokument
+\begin{document}
+
+% Titelbild
+\maketitle
+\thispagestyle{fancy}
+
+\newpage
+
+% Inhaltsverzeichnis
+\pagenumbering{Roman}
+\tableofcontents	
+
+
+\newpage
+\setcounter{page}{1}
+\pagenumbering{arabic}
+
+% Inhalt Start
+
+\section{Vorbereitung}
+\subsection{Einrichten Datenbasis}
+\begin{lstlisting}[style=sql]
+CREATE TABLE regions
+AS SELECT *
+  FROM dbarc00.regions;
+  
+CREATE TABLE nations
+AS SELECT *
+  FROM dbarc00.nations;
+
+CREATE TABLE parts
+AS SELECT *
+  FROM dbarc00.parts;
+  
+CREATE TABLE customers
+AS SELECT *
+  FROM dbarc00.customers;
+
+CREATE TABLE suppliers
+AS SELECT *
+  FROM dbarc00.suppliers;
+
+CREATE TABLE orders
+AS SELECT *
+  FROM dbarc00.orders;
+
+CREATE TABLE partsupps
+AS SELECT *
+  FROM dbarc00.partsupps;
+
+CREATE TABLE lineitems
+AS SELECT *
+  FROM dbarc00.lineitems;
+\end{lstlisting}
+
+\section{Statistiken erheben}
+\begin{lstlisting}[style=sql]
+BEGIN
+	DBMS_STATS.GATHER_TABLE_STATS('dbarc00','parts');
+END;
+\end{lstlisting}
+{\small
+\begin{tabular}{|l|l|l|l|l|l|l|l|l|}
+\hline
+ & CUSTOMERS & LINEITEMS & NATIONS & ORDER & PARTS & PARTSUPPS & REGIONS & SUPPLIERS \\
+\hline
+\hline
+Zellen & 150000 & 6001215 & 25 & 1500000 & 200000 & 800000 & 5 & 10000 \\
+\hline
+Bytes & 23850000 & 750151875 & 2675 & 166500000 & 26400000 & 114400000 & 480 & 1440000 \\
+\hline
+Blöcke & 3494 & 109217 & 4 & 24284 & 3859 & 16650 & 4 & 220 \\
+\hline
+Extends & 43 & 186 & 1 & 95 & 46 & 88 & 1 & 17 \\
+\hline
+\end{tabular}
+}
+
+
+\section{Ausführungsplan}
+\begin{lstlisting}[style=sql]
+EXPLAIN PLAN FOR
+SELECT *
+FROM parts;
+\end{lstlisting}
+\begin{lstlisting}[style=sql]
+SELECT plan_table_output
+FROM TABLE(DBMS_XPLAN.DISPLAY('plan_table',null,'serial'));
+\end{lstlisting}
+\begin{lstlisting}[style=queryexecutionplan]
+---------------------------------------------------------------------------
+| Id  | Operation         | Name  | Rows  | Bytes | Cost (%CPU)| Time     |
+---------------------------------------------------------------------------
+|   0 | SELECT STATEMENT  |       |   200K|    25M|  1051   (1)| 00:00:13 |
+|   1 |  TABLE ACCESS FULL| PARTS |   200K|    25M|  1051   (1)| 00:00:13 |
+---------------------------------------------------------------------------
+\end{lstlisting}
+\textbf{Reflexion} \newline
+BLABLA
+
+\section{Versuche ohne Index}
+\subsection{Projektion}
+\begin{lstlisting}[style=sql]
+EXPLAIN PLAN FOR
+SELECT *
+FROM ORDERS;
+\end{lstlisting}
+\begin{lstlisting}[style=queryexecutionplan]
+----------------------------------------------------------------------------
+| Id  | Operation         | Name   | Rows  | Bytes | Cost (%CPU)| Time     |
+----------------------------------------------------------------------------
+|   0 | SELECT STATEMENT  |        |  1500K|   158M|  6610   (1)| 00:01:20 |
+|   1 |  TABLE ACCESS FULL| ORDERS |  1500K|   158M|  6610   (1)| 00:01:20 |
+----------------------------------------------------------------------------
+\end{lstlisting}
+\textbf{Reflexion} \newline
+BLABLA
+
+\begin{lstlisting}[style=sql]
+EXPLAIN PLAN FOR
+SELECT o_clerk
+FROM ORDERS;
+\end{lstlisting}
+\begin{lstlisting}[style=queryexecutionplan]
+----------------------------------------------------------------------------
+| Id  | Operation         | Name   | Rows  | Bytes | Cost (%CPU)| Time     |
+----------------------------------------------------------------------------
+|   0 | SELECT STATEMENT  |        |  1500K|    22M|  6607   (1)| 00:01:20 |
+|   1 |  TABLE ACCESS FULL| ORDERS |  1500K|    22M|  6607   (1)| 00:01:20 |
+----------------------------------------------------------------------------
+\end{lstlisting}
+\textbf{Reflexion} \newline
+BLABLA
+
+\begin{lstlisting}[style=sql]
+EXPLAIN PLAN FOR
+SELECT DISTINCT o_clerk
+FROM ORDERS;
+\end{lstlisting}
+\begin{lstlisting}[style=queryexecutionplan]
+-----------------------------------------------------------------------------
+| Id  | Operation          | Name   | Rows  | Bytes | Cost (%CPU)| Time     |
+-----------------------------------------------------------------------------
+|   0 | SELECT STATEMENT   |        |  1000 | 16000 |  6676   (2)| 00:01:21 |
+|   1 |  HASH UNIQUE       |        |  1000 | 16000 |  6676   (2)| 00:01:21 |
+|   2 |   TABLE ACCESS FULL| ORDERS |  1500K|    22M|  6607   (1)| 00:01:20 |
+-----------------------------------------------------------------------------
+\end{lstlisting}
+\textbf{Reflexion} \newline
+BLABLA
+
+\subsection{Selektion}
+\textbf{Exact Point Query}
+\begin{lstlisting}[style=sql]
+EXPLAIN PLAN FOR
+SELECT *
+FROM orders
+WHERE o_orderkey=44444;
+\end{lstlisting}
+\begin{lstlisting}[style=queryexecutionplan]
+----------------------------------------------------------------------------
+| Id  | Operation         | Name   | Rows  | Bytes | Cost (%CPU)| Time     |
+----------------------------------------------------------------------------
+|   0 | SELECT STATEMENT  |        |     1 |   111 |  6602   (1)| 00:01:20 |
+|*  1 |  TABLE ACCESS FULL| ORDERS |     1 |   111 |  6602   (1)| 00:01:20 |
+----------------------------------------------------------------------------
+Predicate Information (identified by operation id):
+---------------------------------------------------
+   1 - filter("O_ORDERKEY"=44444)
+\end{lstlisting}
+\textbf{Reflexion} \newline
+BLABLA
+
+\textbf{Partial Point Query}
+\begin{lstlisting}[style=sql]
+EXPLAIN PLAN FOR
+SELECT *
+FROM orders
+WHERE o_orderkey=44444 OR o_clerk='Clerk#000000286';
+\end{lstlisting}
+\begin{lstlisting}[style=queryexecutionplan]
+----------------------------------------------------------------------------
+| Id  | Operation         | Name   | Rows  | Bytes | Cost (%CPU)| Time     |
+----------------------------------------------------------------------------
+|   0 | SELECT STATEMENT  |        |  1501 |   162K|  6629   (1)| 00:01:20 |
+|*  1 |  TABLE ACCESS FULL| ORDERS |  1501 |   162K|  6629   (1)| 00:01:20 |
+----------------------------------------------------------------------------
+Predicate Information (identified by operation id):
+---------------------------------------------------
+   1 - filter("O_CLERK"='Clerk#000000286' OR "O_ORDERKEY"=44444)
+\end{lstlisting}
+\textbf{Reflexion} \newline
+BLABLA
+
+\begin{lstlisting}[style=sql]
+EXPLAIN PLAN FOR
+SELECT *
+FROM orders
+WHERE o_orderkey=44444 AND o_clerk='Clerk#000000286';
+\end{lstlisting}
+\begin{lstlisting}[style=queryexecutionplan]
+----------------------------------------------------------------------------
+| Id  | Operation         | Name   | Rows  | Bytes | Cost (%CPU)| Time     |
+----------------------------------------------------------------------------
+|   0 | SELECT STATEMENT  |        |     1 |   111 |  6611   (1)| 00:01:20 |
+|*  1 |  TABLE ACCESS FULL| ORDERS |     1 |   111 |  6611   (1)| 00:01:20 |
+----------------------------------------------------------------------------
+Predicate Information (identified by operation id):
+---------------------------------------------------
+   1 - filter("O_ORDERKEY"=44444 AND "O_CLERK"='Clerk#000000286')
+\end{lstlisting}
+\textbf{Reflexion} \newline
+BLABLA
+
+\begin{lstlisting}[style=sql]
+EXPLAIN PLAN FOR 
+SELECT *
+FROM orders
+WHERE o_orderkey*2=44444 AND o_clerk='Clerk#000000286';
+\end{lstlisting}
+\begin{lstlisting}[style=queryexecutionplan]
+----------------------------------------------------------------------------
+| Id  | Operation         | Name   | Rows  | Bytes | Cost (%CPU)| Time     |
+----------------------------------------------------------------------------
+|   0 | SELECT STATEMENT  |        |    15 |  1665 |  6615   (1)| 00:01:20 |
+|*  1 |  TABLE ACCESS FULL| ORDERS |    15 |  1665 |  6615   (1)| 00:01:20 |
+----------------------------------------------------------------------------
+ 
+Predicate Information (identified by operation id):
+---------------------------------------------------
+   1 - filter("O_ORDERKEY"*2=44444 AND "O_CLERK"='Clerk#000000286')
+\end{lstlisting}
+\textbf{Reflexion} \newline
+BLABLA
+
+\textbf{Range Query}
+\begin{lstlisting}[style=sqlNoTitle]
+EXPLAIN PLAN FOR
+SELECT *
+FROM orders
+WHERE o_orderkey BETWEEN 111111 AND 222222
+\end{lstlisting}
+\begin{lstlisting}[style=queryexecutionplan]
+----------------------------------------------------------------------------
+| Id  | Operation         | Name   | Rows  | Bytes | Cost (%CPU)| Time     |
+----------------------------------------------------------------------------
+|   0 | SELECT STATEMENT  |        | 27780 |  3011K|  6603   (1)| 00:01:20 |
+|*  1 |  TABLE ACCESS FULL| ORDERS | 27780 |  3011K|  6603   (1)| 00:01:20 |
+----------------------------------------------------------------------------
+Predicate Information (identified by operation id):
+---------------------------------------------------
+   1 - filter("O_ORDERKEY"<=222222 AND "O_ORDERKEY">=111111)
+\end{lstlisting}
+\textbf{Reflexion} \newline
+Die Intervallgrösse spielt in diesem Beispiel keine Rolle.
+
+\textbf{Partial Range Query}
+\begin{lstlisting}[style=sqlNoTitle]
+EXPLAIN PLAN FOR
+SELECT *
+FROM orders
+WHERE o_orderkey BETWEEN 44444 AND 55555
+AND   o_clerk BETWEEN 'Clerk#000000130' AND 'Clerk#000000139'
+\end{lstlisting}
+\begin{lstlisting}[style=queryexecutionplan]
+----------------------------------------------------------------------------
+| Id  | Operation         | Name   | Rows  | Bytes | Cost (%CPU)| Time     |
+----------------------------------------------------------------------------
+|   0 | SELECT STATEMENT  |        |     6 |   666 |  6611   (1)| 00:01:20 |
+|*  1 |  TABLE ACCESS FULL| ORDERS |     6 |   666 |  6611   (1)| 00:01:20 |
+----------------------------------------------------------------------------
+Predicate Information (identified by operation id):
+---------------------------------------------------
+   1 - filter("O_ORDERKEY"<=55555 AND "O_CLERK"<='Clerk#000000139' AND 
+              "O_ORDERKEY">=44444 AND "O_CLERK">='Clerk#000000130')
+\end{lstlisting}
+\textbf{Reflexion} \newline
+BLABLA
+
+\subsection{Join}
+\begin{lstlisting}[style=sqlNoTitle]
+EXPLAIN PLAN FOR
+SELECT *
+FROM orders, customers
+WHERE o_custkey = c_custkey
+AND   o_orderkey < 100;
+\end{lstlisting}
+\begin{lstlisting}[style=queryexecutionplan]
+--------------------------------------------------------------------------------
+| Id  | Operation          | Name      | Rows  | Bytes | Cost (%CPU)| Time     |
+--------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT   |           |    25 |  6750 |  7555   (1)| 00:01:31 |
+|*  1 |  HASH JOIN         |           |    25 |  6750 |  7555   (1)| 00:01:31 |
+|*  2 |   TABLE ACCESS FULL| ORDERS    |    25 |  2775 |  6602   (1)| 00:01:20 |
+|   3 |   TABLE ACCESS FULL| CUSTOMERS |   150K|    22M|   951   (1)| 00:00:12 |
+--------------------------------------------------------------------------------
+Predicate Information (identified by operation id):
+---------------------------------------------------
+   1 - access("O_CUSTKEY"="C_CUSTKEY")
+   2 - filter("O_ORDERKEY"<100)
+\end{lstlisting}
+\textbf{Reflexion} \newline
+Spielen Varianten in der Formulierung eine Rolle?
+//NO DIFFERENCE FOR INNER JOIN
+
+\section{Versuch mit Index}
+\begin{lstlisting}[style=sql]
+CREATE INDEX o_orderkey_ix ON orders(o_orderkey);
+\end{lstlisting}
+\begin{lstlisting}[style=sql]
+CREATE INDEX o_clerk_ix ON orders(o_clerk);
+\end{lstlisting}
+{\normalsize
+\begin{tabular}{|l|l|l|}
+\hline
+ Indexgrösse & Index Name & Tabellengrösse in Bytes \\
+\hline
+\hline
+60817408 & o\_orderkey\_ix & 166500000 \\
+\hline
+96468992	 & o\_clerik\_ix & 166500000 \\
+\hline
+\end{tabular}
+}
+
+\subsection{Projektion}
+\begin{lstlisting}[style=sql]
+EXPLAIN PLAN FOR
+SELECT DISTINCT o_clerk
+FROM ORDERS;
+\end{lstlisting}
+\begin{lstlisting}[style=queryexecutionplan]
+------------------------------------------------------------------------------------
+| Id  | Operation             | Name       | Rows  | Bytes | Cost (%CPU)| Time     |
+------------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT      |            |  1000 | 16000 |  1615   (5)| 00:00:20 |
+|   1 |  HASH UNIQUE          |            |  1000 | 16000 |  1615   (5)| 00:00:20 |
+|   2 |   INDEX FAST FULL SCAN| O_CLERK_IX |  1500K|    22M|  1546   (1)| 00:00:19 |
+------------------------------------------------------------------------------------
+\end{lstlisting}
+\textbf{Reflexion} \newline
+BLABLA
+
+\subsection{Selektion}
+Exact Point Query
+\begin{lstlisting}[style=sql]
+EXPLAIN PLAN FOR
+SELECT *
+FROM ORDERS
+WHERE o_orderkey=44444
+\end{lstlisting}
+\begin{lstlisting}[style=queryexecutionplan]
+---------------------------------------------------------------------------------------------
+| Id  | Operation                   | Name          | Rows  | Bytes | Cost (%CPU)| Time     |
+---------------------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT            |               |     1 |   111 |     4   (0)| 00:00:01 |
+|   1 |  TABLE ACCESS BY INDEX ROWID| ORDERS        |     1 |   111 |     4   (0)| 00:00:01 |
+|*  2 |   INDEX RANGE SCAN          | O_ORDERKEY_IX |     1 |       |     3   (0)| 00:00:01 |
+---------------------------------------------------------------------------------------------
+Predicate Information (identified by operation id):
+---------------------------------------------------
+   2 - access("O_ORDERKEY"=44444)
+\end{lstlisting}
+
+\begin{lstlisting}[style=sql]
+EXPLAIN PLAN FOR
+SELECT /*+ FULL(orders) */ *
+FROM ORDERS
+WHERE o_orderkey=44444
+\end{lstlisting}
+\begin{lstlisting}[style=queryexecutionplan]
+----------------------------------------------------------------------------
+| Id  | Operation         | Name   | Rows  | Bytes | Cost (%CPU)| Time     |
+----------------------------------------------------------------------------
+|   0 | SELECT STATEMENT  |        |     1 |   111 |  6602   (1)| 00:01:20 |
+|*  1 |  TABLE ACCESS FULL| ORDERS |     1 |   111 |  6602   (1)| 00:01:20 |
+----------------------------------------------------------------------------
+Predicate Information (identified by operation id):
+---------------------------------------------------
+   1 - filter("O_ORDERKEY"=44444)
+\end{lstlisting}
+\textbf{Reflexion} \newline
+BLABLA
+
+Partial Point Query
+\begin{lstlisting}[style=sql]
+EXPLAIN PLAN FOR
+SELECT *
+FROM orders
+WHERE o_orderkey=44444 OR o_clerk='Clerk#000000286';
+\end{lstlisting}
+\begin{lstlisting}[style=queryexecutionplan]
+--------------------------------------------------------------------------------------------------
+| Id  | Operation                        | Name          | Rows  | Bytes | Cost (%CPU)| Time     |
+--------------------------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT                 |               |  1501 |   162K|   336   (0)| 00:00:05 |
+|   1 |  TABLE ACCESS BY INDEX ROWID     | ORDERS        |  1501 |   162K|   336   (0)| 00:00:05 |
+|   2 |   BITMAP CONVERSION TO ROWIDS    |               |       |       |            |          |
+|   3 |    BITMAP OR                     |               |       |       |            |          |
+|   4 |     BITMAP CONVERSION FROM ROWIDS|               |       |       |            |          |
+|*  5 |      INDEX RANGE SCAN            | O_CLERK_IX    |       |       |     8   (0)| 00:00:01 |
+|   6 |     BITMAP CONVERSION FROM ROWIDS|               |       |       |            |          |
+|*  7 |      INDEX RANGE SCAN            | O_ORDERKEY_IX |       |       |     3   (0)| 00:00:01 |
+--------------------------------------------------------------------------------------------------
+Predicate Information (identified by operation id):
+---------------------------------------------------
+   5 - access("O_CLERK"='Clerk#000000286')
+   7 - access("O_ORDERKEY"=44444)
+\end{lstlisting}
+\textbf{Reflexion} \newline
+BLABLA
+
+\begin{lstlisting}[style=sql]
+EXPLAIN PLAN FOR
+SELECT *
+FROM orders
+WHERE o_orderkey=44444 AND o_clerk='Clerk#000000286';
+\end{lstlisting}
+\begin{lstlisting}[style=queryexecutionplan]
+---------------------------------------------------------------------------------------------
+| Id  | Operation                   | Name          | Rows  | Bytes | Cost (%CPU)| Time     |
+---------------------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT            |               |     1 |   111 |     4   (0)| 00:00:01 |
+|*  1 |  TABLE ACCESS BY INDEX ROWID| ORDERS        |     1 |   111 |     4   (0)| 00:00:01 |
+|*  2 |   INDEX RANGE SCAN          | O_ORDERKEY_IX |     1 |       |     3   (0)| 00:00:01 |
+---------------------------------------------------------------------------------------------
+Predicate Information (identified by operation id):
+---------------------------------------------------
+   1 - filter("O_CLERK"='Clerk#000000286')
+   2 - access("O_ORDERKEY"=44444)
+\end{lstlisting}
+\textbf{Reflexion} \newline
+BLABLA
+
+\begin{lstlisting}[style=sql]
+EXPLAIN PLAN FOR
+SELECT *
+FROM orders
+WHERE o_orderkey*2=44444 AND o_clerk='Clerk#000000286';
+\end{lstlisting}
+\begin{lstlisting}[style=queryexecutionplan]
+------------------------------------------------------------------------------------------
+| Id  | Operation                   | Name       | Rows  | Bytes | Cost (%CPU)| Time     |
+------------------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT            |            |    15 |  1665 |  1464   (1)| 00:00:18 |
+|*  1 |  TABLE ACCESS BY INDEX ROWID| ORDERS     |    15 |  1665 |  1464   (1)| 00:00:18 |
+|*  2 |   INDEX RANGE SCAN          | O_CLERK_IX |  1500 |       |     8   (0)| 00:00:01 |
+------------------------------------------------------------------------------------------
+Predicate Information (identified by operation id):
+---------------------------------------------------
+   1 - filter("O_ORDERKEY"*2=44444)
+   2 - access("O_CLERK"='Clerk#000000286')
+\end{lstlisting}
+\textbf{Reflexion} \newline
+BLABLA
+
+Range Query
+\begin{lstlisting}[style=sql]
+EXPLAIN PLAN FOR
+SELECT *
+FROM orders
+WHERE o_orderkey BETWEEN 111111 AND 222222
+\end{lstlisting}
+\begin{lstlisting}[style=queryexecutionplan]
+---------------------------------------------------------------------------------------------
+| Id  | Operation                   | Name          | Rows  | Bytes | Cost (%CPU)| Time     |
+---------------------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT            |               | 27780 |  3011K|   932   (1)| 00:00:12 |
+|   1 |  TABLE ACCESS BY INDEX ROWID| ORDERS        | 27780 |  3011K|   932   (1)| 00:00:12 |
+|*  2 |   INDEX RANGE SCAN          | O_ORDERKEY_IX | 27780 |       |    68   (0)| 00:00:01 |
+---------------------------------------------------------------------------------------------
+Predicate Information (identified by operation id):
+---------------------------------------------------
+   2 - access("O_ORDERKEY">=111111 AND "O_ORDERKEY"<=222222)
+\end{lstlisting}
+\textbf{Reflexion} \newline
+Spielt der Intervall eine Rolle?
+
+Partial Range Query
+\begin{lstlisting}[style=sql]
+EXPLAIN PLAN FOR
+SELECT *
+FROM orders
+WHERE o_orderkey BETWEEN 44444 AND 55555
+AND   o_clerk BETWEEN 'Clerk#000000130' AND 'Clerk#000000139'
+\end{lstlisting}
+\begin{lstlisting}[style=queryexecutionplan]
+--------------------------------------------------------------------------------------------------
+| Id  | Operation                        | Name          | Rows  | Bytes | Cost (%CPU)| Time     |
+--------------------------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT                 |               |     6 |   666 |    27  (12)| 00:00:01 |
+|   1 |  TABLE ACCESS BY INDEX ROWID     | ORDERS        |     6 |   666 |    27  (12)| 00:00:01 |
+|   2 |   BITMAP CONVERSION TO ROWIDS    |               |       |       |            |          |
+|   3 |    BITMAP AND                    |               |       |       |            |          |
+|   4 |     BITMAP CONVERSION FROM ROWIDS|               |       |       |            |          |
+|   5 |      SORT ORDER BY               |               |       |       |            |          |
+|*  6 |       INDEX RANGE SCAN           | O_ORDERKEY_IX |  2780 |       |     9   (0)| 00:00:01 |
+|   7 |     BITMAP CONVERSION FROM ROWIDS|               |       |       |            |          |
+|   8 |      SORT ORDER BY               |               |       |       |            |          |
+|*  9 |       INDEX RANGE SCAN           | O_CLERK_IX    |  2780 |       |    14   (0)| 00:00:01 |
+--------------------------------------------------------------------------------------------------
+Predicate Information (identified by operation id):
+---------------------------------------------------
+   6 - access("O_ORDERKEY">=44444 AND "O_ORDERKEY"<=55555)
+   9 - access("O_CLERK">='Clerk#000000130' AND "O_CLERK"<='Clerk#000000139')
+\end{lstlisting}
+\textbf{Reflexion} \newline
+BLABLA
+
+\subsection{Join}
+\begin{lstlisting}[style=sql]
+EXPLAIN PLAN FOR
+SELECT *
+FROM orders, customers
+WHERE o_custkey = c_custkey;
+\end{lstlisting}
+\begin{lstlisting}[style=queryexecutionplan]
+----------------------------------------------------------------------------------------
+| Id  | Operation          | Name      | Rows  | Bytes |TempSpc| Cost (%CPU)| Time     |
+----------------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT   |           |  1500K|   386M|       | 17514   (1)| 00:03:31 |
+|*  1 |  HASH JOIN         |           |  1500K|   386M|    24M| 17514   (1)| 00:03:31 |
+|   2 |   TABLE ACCESS FULL| CUSTOMERS |   150K|    22M|       |   951   (1)| 00:00:12 |
+|   3 |   TABLE ACCESS FULL| ORDERS    |  1500K|   158M|       |  6610   (1)| 00:01:20 |
+----------------------------------------------------------------------------------------
+Predicate Information (identified by operation id):
+---------------------------------------------------
+   1 - access("O_CUSTKEY"="C_CUSTKEY")
+\end{lstlisting}
+\textbf{Reflexion} \newline
+BLABLA
+
+\begin{lstlisting}[style=sql]
+EXPLAIN PLAN FOR
+SELECT *
+FROM orders, customers
+WHERE o_custkey = c_custkey
+AND   o_orderkey < 100;
+\end{lstlisting}
+\begin{lstlisting}[style=queryexecutionplan]
+----------------------------------------------------------------------------------------------
+| Id  | Operation                    | Name          | Rows  | Bytes | Cost (%CPU)| Time     |
+----------------------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT             |               |    25 |  6750 |   957   (1)| 00:00:12 |
+|*  1 |  HASH JOIN                   |               |    25 |  6750 |   957   (1)| 00:00:12 |
+|   2 |   TABLE ACCESS BY INDEX ROWID| ORDERS        |    25 |  2775 |     4   (0)| 00:00:01 |
+|*  3 |    INDEX RANGE SCAN          | O_ORDERKEY_IX |    25 |       |     3   (0)| 00:00:01 |
+|   4 |   TABLE ACCESS FULL          | CUSTOMERS     |   150K|    22M|   951   (1)| 00:00:12 |
+----------------------------------------------------------------------------------------------
+Predicate Information (identified by operation id):
+---------------------------------------------------
+   1 - access("O_CUSTKEY"="C_CUSTKEY")
+   3 - access("O_ORDERKEY"<100)
+\end{lstlisting}
+\textbf{Reflexion} \newline
+BLABLA
+
+\begin{lstlisting}[style=sql]
+CREATE INDEX c_custkey_ix ON customers(c_custkey);
+\end{lstlisting}
+\begin{lstlisting}[style=sql]
+EXPLAIN PLAN FOR
+SELECT *
+FROM orders, customers
+WHERE o_custkey = c_custkey;
+\end{lstlisting}
+\begin{lstlisting}[style=queryexecutionplan]
+----------------------------------------------------------------------------------------
+| Id  | Operation          | Name      | Rows  | Bytes |TempSpc| Cost (%CPU)| Time     |
+----------------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT   |           |  1500K|   386M|       | 17514   (1)| 00:03:31 |
+|*  1 |  HASH JOIN         |           |  1500K|   386M|    24M| 17514   (1)| 00:03:31 |
+|   2 |   TABLE ACCESS FULL| CUSTOMERS |   150K|    22M|       |   951   (1)| 00:00:12 |
+|   3 |   TABLE ACCESS FULL| ORDERS    |  1500K|   158M|       |  6610   (1)| 00:01:20 |
+----------------------------------------------------------------------------------------
+Predicate Information (identified by operation id):
+---------------------------------------------------
+   1 - access("O_CUSTKEY"="C_CUSTKEY")
+\end{lstlisting}
+\textbf{Reflexion} \newline
+BLABLA
+
+Erzwingen eines Nested Loop Joins:
+\begin{lstlisting}[style=sql]
+EXPLAIN PLAN FOR
+SELECT /*+ USE_NL (o c) */ *
+FROM orders o, customers c
+WHERE o_custkey = c_custkey;
+\end{lstlisting}
+\begin{lstlisting}[style=queryexecutionplan]
+---------------------------------------------------------------------------------------------
+| Id  | Operation                    | Name         | Rows  | Bytes | Cost (%CPU)| Time     |
+---------------------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT             |              |  1500K|   386M|  3007K  (1)| 10:01:34 |
+|   1 |  NESTED LOOPS                |              |       |       |            |          |
+|   2 |   NESTED LOOPS               |              |  1500K|   386M|  3007K  (1)| 10:01:34 |
+|   3 |    TABLE ACCESS FULL         | ORDERS       |  1500K|   158M|  6610   (1)| 00:01:20 |
+|*  4 |    INDEX RANGE SCAN          | C_CUSTKEY_IX |     1 |       |     1   (0)| 00:00:01 |
+|   5 |   TABLE ACCESS BY INDEX ROWID| CUSTOMERS    |     1 |   159 |     2   (0)| 00:00:01 |
+---------------------------------------------------------------------------------------------
+Predicate Information (identified by operation id):
+---------------------------------------------------
+   4 - access("O_CUSTKEY"="C_CUSTKEY")
+\end{lstlisting}
+\textbf{Reflexion} \newline
+BLABLA
+
+Erzwingen eines Nicht-Hash Joins:
+\begin{lstlisting}[style=sql]
+EXPLAIN PLAN FOR
+SELECT /*+ NO_USE_HASH (o c) */ *
+FROM orders o, customers c
+WHERE o_custkey = c_custkey;
+\end{lstlisting}
+\begin{lstlisting}[style=queryexecutionplan]
+-----------------------------------------------------------------------------------------
+| Id  | Operation           | Name      | Rows  | Bytes |TempSpc| Cost (%CPU)| Time     |
+-----------------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT    |           |  1500K|   386M|       | 50568   (1)| 00:10:07 |
+|   1 |  MERGE JOIN         |           |  1500K|   386M|       | 50568   (1)| 00:10:07 |
+|   2 |   SORT JOIN         |           |   150K|    22M|    52M|  6202   (1)| 00:01:15 |
+|   3 |    TABLE ACCESS FULL| CUSTOMERS |   150K|    22M|       |   951   (1)| 00:00:12 |
+|*  4 |   SORT JOIN         |           |  1500K|   158M|   390M| 44366   (1)| 00:08:53 |
+|   5 |    TABLE ACCESS FULL| ORDERS    |  1500K|   158M|       |  6610   (1)| 00:01:20 |
+-----------------------------------------------------------------------------------------
+Predicate Information (identified by operation id):
+---------------------------------------------------
+   4 - access("O_CUSTKEY"="C_CUSTKEY")
+       filter("O_CUSTKEY"="C_CUSTKEY")
+\end{lstlisting}
+\textbf{Reflexion} \newline
+BLABLA
+
+\section{Quiz}
+\begin{lstlisting}[style=sql]
+EXPLAIN PLAN FOR
+SELECT count(*)
+FROM parts, partsupps, lineitems
+WHERE p_partkey=ps_partkey
+AND ps_partkey=l_partkey
+AND ps_suppkey=l_suppkey
+AND ((ps_partkey = 5 AND p_type = 'MEDIUM ANODIZED BRASS')
+OR (ps_partkey = 5 AND p_type = 'MEDIUM BRUSHED COPPER'));
+\end{lstlisting}
+\newline
+Ausgangslage:
+\begin{lstlisting}[style=queryexecutionplan]
+----------------------------------------------------------------------------------
+| Id  | Operation            | Name      | Rows  | Bytes | Cost (%CPU)| Time     |
+----------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT     |           |     1 |    45 | 35577   (2)| 00:07:07 |
+|   1 |  SORT AGGREGATE      |           |     1 |    45 |            |          |
+|*  2 |   HASH JOIN          |           |     4 |   180 | 35577   (2)| 00:07:07 |
+|*  3 |    HASH JOIN         |           |     4 |   144 |  5872   (6)| 00:01:11 |
+|*  4 |     TABLE ACCESS FULL| PARTSUPPS |     4 |    36 |  4525   (1)| 00:00:55 |
+|*  5 |     TABLE ACCESS FULL| PARTS     |  2667 | 72009 |  1052   (1)| 00:00:13 |
+|   6 |    TABLE ACCESS FULL | LINEITEMS |  6001K|    51M| 29675   (1)| 00:05:57 |
+----------------------------------------------------------------------------------
+Predicate Information (identified by operation id):
+--------------------------------------------------- 
+   2 - access("PS_PARTKEY"="L_PARTKEY" AND "PS_SUPPKEY"="L_SUPPKEY")
+   3 - access("P_PARTKEY"="PS_PARTKEY")
+       filter("PS_PARTKEY"=5 AND "P_TYPE"='MEDIUM ANODIZED BRASS' OR 
+              "PS_PARTKEY"=5 AND "P_TYPE"='MEDIUM BRUSHED COPPER')
+   4 - filter("PS_PARTKEY"=5)
+\end{lstlisting}
+
+ps\_partkey ist restriktiv:
+\begin{lstlisting}[style=sql]
+CREATE INDEX ps_partkey_ix ON partsupps(ps_partkey);
+\end{lstlisting}
+\begin{lstlisting}[style=queryexecutionplan]
+------------------------------------------------------------------------------------------------
+| Id  | Operation                      | Name          | Rows  | Bytes | Cost (%CPU)| Time     |
+------------------------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT               |               |     1 |    45 | 31055   (2)| 00:06:13 |
+|   1 |  SORT AGGREGATE                |               |     1 |    45 |            |          |
+|*  2 |   HASH JOIN                    |               |     4 |   180 | 31055   (2)| 00:06:13 |
+|*  3 |    HASH JOIN                   |               |     4 |   144 |  1350  (23)| 00:00:17 |
+|   4 |     TABLE ACCESS BY INDEX ROWID| PARTSUPPS     |     4 |    36 |     4   (0)| 00:00:01 |
+|*  5 |      INDEX RANGE SCAN          | PS_PARTKEY_IX |     4 |       |     3   (0)| 00:00:01 |
+|*  6 |     TABLE ACCESS FULL          | PARTS         |  2667 | 72009 |  1052   (1)| 00:00:13 |
+|   7 |    TABLE ACCESS FULL           | LINEITEMS     |  6001K|    51M| 29675   (1)| 00:05:57 |
+------------------------------------------------------------------------------------------------
+ 
+Predicate Information (identified by operation id):
+---------------------------------------------------
+ 
+   2 - access("PS_PARTKEY"="L_PARTKEY" AND "PS_SUPPKEY"="L_SUPPKEY")
+   3 - access("P_PARTKEY"="PS_PARTKEY")
+       filter("PS_PARTKEY"=5 AND "P_TYPE"='MEDIUM ANODIZED BRASS' OR "PS_PARTKEY"=5 AND 
+              "P_TYPE"='MEDIUM BRUSHED COPPER')
+\end{lstlisting}
+
+p\_type ist restriktiv:
+\begin{lstlisting}[style=sql]
+CREATE INDEX p_type_ix ON parts(p_type);
+\end{lstlisting}
+\begin{lstlisting}[style=queryexecutionplan]
+------------------------------------------------------------------------------------------------------
+| Id  | Operation                            | Name          | Rows  | Bytes | Cost (%CPU)| Time     |
+------------------------------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT                     |               |     1 |    45 | 29885   (1)| 00:05:59 |
+|   1 |  SORT AGGREGATE                      |               |     1 |    45 |            |          |
+|*  2 |   HASH JOIN                          |               |     4 |   180 | 29885   (1)| 00:05:59 |
+|   3 |    NESTED LOOPS                      |               |       |       |            |          |
+|   4 |     NESTED LOOPS                     |               |     4 |   144 |   180   (0)| 00:00:03 |
+|   5 |      TABLE ACCESS BY INDEX ROWID     | PARTSUPPS     |     4 |    36 |     4   (0)| 00:00:01 |
+|*  6 |       INDEX RANGE SCAN               | PS_PARTKEY_IX |     4 |       |     3   (0)| 00:00:01 |
+|   7 |      BITMAP CONVERSION TO ROWIDS     |               |       |       |            |          |
+|   8 |       BITMAP AND                     |               |       |       |            |          |
+|   9 |        BITMAP OR                     |               |       |       |            |          |
+|  10 |         BITMAP CONVERSION FROM ROWIDS|               |       |       |            |          |
+|* 11 |          INDEX RANGE SCAN            | P_TYPE_IX     |       |       |     8   (0)| 00:00:01 |
+|  12 |         BITMAP CONVERSION FROM ROWIDS|               |       |       |            |          |
+|* 13 |          INDEX RANGE SCAN            | P_TYPE_IX     |       |       |     8   (0)| 00:00:01 |
+|  14 |        BITMAP OR                     |               |       |       |            |          |
+|  15 |         BITMAP CONVERSION FROM ROWIDS|               |       |       |            |          |
+|* 16 |          INDEX RANGE SCAN            | P_TYPE_IX     |       |       |     8   (0)| 00:00:01 |
+|  17 |         BITMAP CONVERSION FROM ROWIDS|               |       |       |            |          |
+|* 18 |          INDEX RANGE SCAN            | P_TYPE_IX     |       |       |     8   (0)| 00:00:01 |
+|* 19 |     TABLE ACCESS BY INDEX ROWID      | PARTS         |     1 |    27 |   180   (0)| 00:00:03 |
+|  20 |    TABLE ACCESS FULL                 | LINEITEMS     |  6001K|    51M| 29675   (1)| 00:05:57 |
+------------------------------------------------------------------------------------------------------
+Predicate Information (identified by operation id):
+---------------------------------------------------
+   2 - access("PS_PARTKEY"="L_PARTKEY" AND "PS_SUPPKEY"="L_SUPPKEY")
+   6 - access("PS_PARTKEY"=5)
+  11 - access("P_TYPE"='MEDIUM ANODIZED BRASS')
+  13 - access("P_TYPE"='MEDIUM BRUSHED COPPER')
+  16 - access("P_TYPE"='MEDIUM ANODIZED BRASS')
+  18 - access("P_TYPE"='MEDIUM BRUSHED COPPER')
+  19 - filter("P_PARTKEY"="PS_PARTKEY" AND ("PS_PARTKEY"=5 AND "P_TYPE"='MEDIUM ANODIZED 
+\end{lstlisting}
+
+l\_partkey ist restriktiv:
+\begin{lstlisting}[style=sql]
+CREATE INDEX l_partkey_ix ON lineitems(l_partkey);
+\end{lstlisting}
+\begin{lstlisting}[style=queryexecutionplan]
+-------------------------------------------------------------------------------------------------------
+| Id  | Operation                             | Name          | Rows  | Bytes | Cost (%CPU)| Time     |
+-------------------------------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT                      |               |     1 |    45 |   308   (0)| 00:00:04 |
+|   1 |  SORT AGGREGATE                       |               |     1 |    45 |            |          |
+|   2 |   NESTED LOOPS                        |               |       |       |            |          |
+|   3 |    NESTED LOOPS                       |               |     4 |   180 |   308   (0)| 00:00:04 |
+|   4 |     NESTED LOOPS                      |               |     4 |   144 |   180   (0)| 00:00:03 |
+|   5 |      TABLE ACCESS BY INDEX ROWID      | PARTSUPPS     |     4 |    36 |     4   (0)| 00:00:01 |
+|*  6 |       INDEX RANGE SCAN                | PS_PARTKEY_IX |     4 |       |     3   (0)| 00:00:01 |
+|*  7 |      TABLE ACCESS BY INDEX ROWID      | PARTS         |     1 |    27 |   180   (0)| 00:00:03 |
+|   8 |       BITMAP CONVERSION TO ROWIDS     |               |       |       |            |          |
+|   9 |        BITMAP AND                     |               |       |       |            |          |
+|  10 |         BITMAP OR                     |               |       |       |            |          |
+|  11 |          BITMAP CONVERSION FROM ROWIDS|               |       |       |            |          |
+|* 12 |           INDEX RANGE SCAN            | P_TYPE_IX     |       |       |     8   (0)| 00:00:01 |
+|  13 |          BITMAP CONVERSION FROM ROWIDS|               |       |       |            |          |
+|* 14 |           INDEX RANGE SCAN            | P_TYPE_IX     |       |       |     8   (0)| 00:00:01 |
+|  15 |         BITMAP OR                     |               |       |       |            |          |
+|  16 |          BITMAP CONVERSION FROM ROWIDS|               |       |       |            |          |
+|* 17 |           INDEX RANGE SCAN            | P_TYPE_IX     |       |       |     8   (0)| 00:00:01 |
+|  18 |          BITMAP CONVERSION FROM ROWIDS|               |       |       |            |          |
+|* 19 |           INDEX RANGE SCAN            | P_TYPE_IX     |       |       |     8   (0)| 00:00:01 |
+|* 20 |     INDEX RANGE SCAN                  | L_PARTKEY_IX  |    30 |       |     2   (0)| 00:00:01 |
+|* 21 |    TABLE ACCESS BY INDEX ROWID        | LINEITEMS     |     1 |     9 |    32   (0)| 00:00:01 |
+-------------------------------------------------------------------------------------------------------
+Predicate Information (identified by operation id):
+---------------------------------------------------
+   6 - access("PS_PARTKEY"=5)
+   7 - filter("P_PARTKEY"="PS_PARTKEY" AND ("PS_PARTKEY"=5 AND "P_TYPE"='MEDIUM ANODIZED 
+              BRASS' OR "PS_PARTKEY"=5 AND "P_TYPE"='MEDIUM BRUSHED COPPER'))
+  12 - access("P_TYPE"='MEDIUM ANODIZED BRASS')
+  14 - access("P_TYPE"='MEDIUM BRUSHED COPPER')
+  17 - access("P_TYPE"='MEDIUM ANODIZED BRASS')
+  19 - access("P_TYPE"='MEDIUM BRUSHED COPPER')
+  20 - access("PS_PARTKEY"="L_PARTKEY")
+  21 - filter("PS_SUPPKEY"="L_SUPPKEY")
+\end{lstlisting}
+
+Optimierte Abfrage:
+\begin{lstlisting}[style=sql]
+EXPLAIN PLAN FOR
+SELECT count(*)
+FROM parts, partsupps, lineitems, orders
+WHERE p_partkey=ps_partkey
+AND ps_partkey=l_partkey
+AND ps_suppkey=l_suppkey
+AND l_orderkey=o_orderkey
+\end{lstlisting}
+\begin{lstlisting}[style=queryexecutionplan]
+-------------------------------------------------------------------------------------------
+| Id  | Operation             | Name      | Rows  | Bytes |TempSpc| Cost (%CPU)| Time     |
+-------------------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT      |           |     1 |    35 |       | 54346   (1)| 00:10:53 |
+|   1 |  SORT AGGREGATE       |           |     1 |    35 |       |            |          |
+|*  2 |   HASH JOIN           |           |   803K|    26M|    25M| 54346   (1)| 00:10:53 |
+|   3 |    TABLE ACCESS FULL  | ORDERS    |  1500K|  8789K|       |  6599   (1)| 00:01:20 |
+|*  4 |    HASH JOIN          |           |   792K|    21M|    19M| 44915   (1)| 00:08:59 |
+|*  5 |     HASH JOIN         |           |   792K|    10M|  3328K|  6540   (1)| 00:01:19 |
+|   6 |      TABLE ACCESS FULL| PARTS     |   200K|   976K|       |  1050   (1)| 00:00:13 |
+|   7 |      TABLE ACCESS FULL| PARTSUPPS |   800K|  7031K|       |  4523   (1)| 00:00:55 |
+|   8 |     TABLE ACCESS FULL | LINEITEMS |  6001K|    85M|       | 29675   (1)| 00:05:57 |
+-------------------------------------------------------------------------------------------
+Predicate Information (identified by operation id):
+---------------------------------------------------
+   2 - access("L_ORDERKEY"="O_ORDERKEY")
+   4 - access("PS_PARTKEY"="L_PARTKEY" AND "PS_SUPPKEY"="L_SUPPKEY")
+   5 - access("P_PARTKEY"="PS_PARTKEY")
+\end{lstlisting}
+\textbf{Reflexion} \newline
+BLABLA
+
+\section{Deep Left Join}
+
+\section{Eigene SQL-Abfragen}
+
+% Inhalt Ende
+\end{document} 
