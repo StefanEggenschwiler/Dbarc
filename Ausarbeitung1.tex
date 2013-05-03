@@ -16,6 +16,7 @@
 \usepackage{enumitem}
 \usepackage{parskip}
 \usepackage[a4paper,top=2cm]{geometry}
+\usepackage{framed}
 \setlength{\textwidth}{17cm}
 \setlength{\oddsidemargin}{-0.5cm}
 
@@ -99,7 +100,7 @@
 \vspace{0.2cm}
 \Large{Ausarbeitung 1: Anfrageverarbeitung}\\
 }
-\author{Daniel Gürber & Stefan Eggenschwiler}
+\author{Daniel Gürber \cr Stefan Eggenschwiler}
 \date{02.05.2013}
 
 % hier beginnt das Dokument
@@ -123,6 +124,19 @@
 % Inhalt Start
 
 \section{Vorbereitung}
+\subsection{Einleitung}
+Diese Ausarbeitung behandelt die Übung „SQL Tuning“. Sie wird Schritt für Schritt gelöst. Gezeigt werden das SQL-Statement und den dazugehörigen Ausführungsplan, der von der Oracle Datenbank generiert wird. Bei nennenswerten Erkenntnissen werden diese unterhalb des Ausführungsplan in einer kurzen Reflexion behandelt. Die Nummerierung im Dokument entspricht dabei der Nummern des Übungsblattes.
+Um die Übung auszuführen haben wir folgende Verbindungsdaten verwendet: \newline \newline
+Connection Name hades11gdbarc03 \newline
+Username dbarc03 \newline
+Password <YouKnowIt> \newline
+Role default \newline
+Connection Type Basic \newline
+Hostname hades.imvs.technik.fhnw.ch \newline
+Port 1521 \newline
+SID <kein Eintrag> \newline
+Service Name hades11g.hades.fhnw.ch
+
 \subsection{Einrichten Datenbasis}
 \begin{lstlisting}[style=sql]
 CREATE TABLE regions
@@ -164,19 +178,27 @@ BEGIN
 	DBMS_STATS.GATHER_TABLE_STATS('dbarc00','parts');
 END;
 \end{lstlisting}
-{\footnotesize
-\begin{tabular}{|l|l|l|l|l|l|l|l|l|}
+{\normalsize
+\begin{tabular}{|l|l|l|l|l|}
 \hline
- & CUSTOMERS & LINEITEMS & NATIONS & ORDER & PARTS & PARTSUPPS & REGIONS & SUPPLIERS \\
+Tabelle & Anzahl Zeilen & Grösse in Bytes & Anzahl Blöcke & Anzahl Extents \\
 \hline
 \hline
-Zellen & 150000 & 6001215 & 25 & 1500000 & 200000 & 800000 & 5 & 10000 \\
+CUSTOMERS & 150000 & 23850000 & 3494 & 43 \\
 \hline
-Bytes & 23850000 & 750151875 & 2675 & 166500000 & 26400000 & 114400000 & 480 & 1440000 \\
+LINEITEMS & 6001215 & 750151875 & 109217 & 186 \\
 \hline
-Blöcke & 3494 & 109217 & 4 & 24284 & 3859 & 16650 & 4 & 220 \\
+NATIONS & 25 & 2675 & 4 & 1 \\
 \hline
-Extends & 43 & 186 & 1 & 95 & 46 & 88 & 1 & 17 \\
+ORDER & 1500000 & 166500000 & 24284 &  95 \\
+\hline
+PARTS & 200000 & 26400000 & 3859 & 46 \\
+\hline
+PARTSUPPS & 800000 & 114400000 & 16650 & 88 \\
+\hline
+REGIONS & 5 & 480 & 4 & 1 \\
+\hline
+SUPPLIERS & 10000 & 1440000 & 220 & 17 \\
 \hline
 \end{tabular}
 }
@@ -418,12 +440,12 @@ CREATE INDEX o_clerk_ix ON orders(o_clerk);
 {\normalsize
 \begin{tabular}{|l|l|l|}
 \hline
- Indexgrösse & Index Name & Tabellengrösse in Bytes \\
+ Index Name & Index Grösse & Tabellengrösse in Bytes \\
 \hline
 \hline
-60817408 & o\_orderkey\_ix & 166500000 \\
+o\_orderkey\_ix & 60817408 & 166500000 \\
 \hline
-96468992	 & o\_clerik\_ix & 166500000 \\
+o\_clerik\_ix & 96468992	 & 166500000 \\
 \hline
 \end{tabular}
 }
@@ -747,7 +769,6 @@ AND ps_suppkey=l_suppkey
 AND ((ps_partkey = 5 AND p_type = 'MEDIUM ANODIZED BRASS')
 OR (ps_partkey = 5 AND p_type = 'MEDIUM BRUSHED COPPER'));
 \end{lstlisting}
-\newline
 Ausgangslage:
 \begin{lstlisting}[style=queryexecutionplan]
 ----------------------------------------------------------------------------------

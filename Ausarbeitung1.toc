@@ -1,16 +1,17 @@
 \select@language {ngerman}
 \contentsline {section}{\numberline {1}Vorbereitung}{1}
-\contentsline {subsection}{\numberline {1.1}Einrichten Datenbasis}{1}
+\contentsline {subsection}{\numberline {1.1}Einleitung}{1}
+\contentsline {subsection}{\numberline {1.2}Einrichten Datenbasis}{1}
 \contentsline {section}{\numberline {2}Statistiken erheben}{1}
-\contentsline {section}{\numberline {3}Ausf\IeC {\"u}hrungsplan}{1}
+\contentsline {section}{\numberline {3}Ausf\IeC {\"u}hrungsplan}{2}
 \contentsline {section}{\numberline {4}Versuche ohne Index}{2}
 \contentsline {subsection}{\numberline {4.1}Projektion}{2}
-\contentsline {subsection}{\numberline {4.2}Selektion}{2}
-\contentsline {subsection}{\numberline {4.3}Join}{4}
+\contentsline {subsection}{\numberline {4.2}Selektion}{3}
+\contentsline {subsection}{\numberline {4.3}Join}{5}
 \contentsline {section}{\numberline {5}Versuch mit Index}{5}
 \contentsline {subsection}{\numberline {5.1}Projektion}{5}
-\contentsline {subsection}{\numberline {5.2}Selektion}{5}
-\contentsline {subsection}{\numberline {5.3}Join}{7}
+\contentsline {subsection}{\numberline {5.2}Selektion}{6}
+\contentsline {subsection}{\numberline {5.3}Join}{8}
 \contentsline {section}{\numberline {6}Quiz}{9}
-\contentsline {section}{\numberline {7}Deep Left Join}{11}
-\contentsline {section}{\numberline {8}Eigene SQL-Abfragen}{11}
+\contentsline {section}{\numberline {7}Deep Left Join}{12}
+\contentsline {section}{\numberline {8}Eigene SQL-Abfragen}{12}
