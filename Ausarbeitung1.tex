@@ -198,8 +198,6 @@ PARTSUPPS & 800000 & 114400000 & 16650 & 88 \\
 \hline
 REGIONS & 5 & 480 & 4 & 1 \\
 \hline
-SUPPLIERS & 10000 & 1440000 & 220 & 17 \\
-\hline
 \end{tabular}
 }
 
@@ -223,7 +221,7 @@ FROM TABLE(DBMS_XPLAN.DISPLAY('plan_table',null,'serial'));
 ---------------------------------------------------------------------------
 \end{lstlisting}
 \textbf{Reflexion} \newline
-BLABLA
+Da weder ein Index, noch ein Filterkriterium gesetzt sind, wird die gesamte Tabelle ausgelesen und zurückgegeben.
 
 \section{Versuche ohne Index}
 \subsection{Projektion}
@@ -241,7 +239,7 @@ FROM ORDERS;
 ----------------------------------------------------------------------------
 \end{lstlisting}
 \textbf{Reflexion} \newline
-BLABLA
+Da weder ein Index, noch ein Filterkriterium gesetzt sind, wird die gesamte Tabelle ausgelesen und zurückgegeben.
 
 \begin{lstlisting}[style=sql]
 EXPLAIN PLAN FOR
@@ -257,7 +255,7 @@ FROM ORDERS;
 ----------------------------------------------------------------------------
 \end{lstlisting}
 \textbf{Reflexion} \newline
-BLABLA
+Da weder ein Index, noch ein Filterkriterium gesetzt sind, wird die gesamte Tabelle ausgelesen, da aber nur die o\_clerk Spalte ausgelesen wird, sinkt die Größe von 158 MB auf 22 MB.
 
 \begin{lstlisting}[style=sql]
 EXPLAIN PLAN FOR
@@ -274,8 +272,7 @@ FROM ORDERS;
 -----------------------------------------------------------------------------
 \end{lstlisting}
 \textbf{Reflexion} \newline
-BLABLA
-
+Da weder ein Index, noch ein Filterkriterium gesetzt sind, wird die gesamte Tabelle ausgelesen. Durch das Schlüsselwort DISTINCT wird ein HASH UNIQUE ausgelöst, wodurch die Kosten auf 6676 steigen, die Grösse aber auf 16000 Bytes sinkt.
 \subsection{Selektion}
 \textbf{Exact Point Query}
 \begin{lstlisting}[style=sql]
@@ -296,7 +293,7 @@ Predicate Information (identified by operation id):
    1 - filter("O_ORDERKEY"=44444)
 \end{lstlisting}
 \textbf{Reflexion} \newline
-BLABLA
+Da kein Index vorhanden ist, wird die ganze Tabelle ausgelesen und auf o\_orderkey gefiltert.
 
 \textbf{Partial Point Query}
 \begin{lstlisting}[style=sql]
@@ -317,7 +314,7 @@ Predicate Information (identified by operation id):
    1 - filter("O_CLERK"='Clerk#000000286' OR "O_ORDERKEY"=44444)
 \end{lstlisting}
 \textbf{Reflexion} \newline
-BLABLA
+Da kein Index vorhanden ist, wird die ganze Tabelle ausgelesen und auf o\_orderkey und o\_clerk gefiltert, die zusätzliche Bedingung erhöht die Kosten von 6602 auf 6629.
 
 \begin{lstlisting}[style=sql]
 EXPLAIN PLAN FOR
@@ -337,7 +334,7 @@ Predicate Information (identified by operation id):
    1 - filter("O_ORDERKEY"=44444 AND "O_CLERK"='Clerk#000000286')
 \end{lstlisting}
 \textbf{Reflexion} \newline
-BLABLA
+Da kein Index vorhanden ist, wird die ganze Tabelle ausgelesen und auf o\_orderkey und o\_clerk gefiltert, die AND Bedingung senkt von die Kosten von 6629 auf 6611 verglichen mit der OR Bedingung.
 
 \begin{lstlisting}[style=sql]
 EXPLAIN PLAN FOR 
@@ -358,7 +355,7 @@ Predicate Information (identified by operation id):
    1 - filter("O_ORDERKEY"*2=44444 AND "O_CLERK"='Clerk#000000286')
 \end{lstlisting}
 \textbf{Reflexion} \newline
-BLABLA
+Da kein Index vorhanden ist, wird die ganze Tabelle ausgelesen und auf o\_orderkey und o\_clerk gefiltert, die zusätzliche Multiplikation erhöht die Kosten nur um 4.
 
 \textbf{Range Query}
 \begin{lstlisting}[style=sqlNoTitle]
@@ -379,7 +376,8 @@ Predicate Information (identified by operation id):
    1 - filter("O_ORDERKEY"<=222222 AND "O_ORDERKEY">=111111)
 \end{lstlisting}
 \textbf{Reflexion} \newline
-Die Intervallgrösse spielt in diesem Beispiel keine Rolle.
+Da kein Index vorhanden ist, wird die ganze Tabelle ausgelesen und auf o\_orderkey gefiltert, die Range Query ist nur um 1 teurer als die Abfrage auf den einzelnen Wert.
+Die Intervallgrösse spielt in diesem Beispiel, abgesehen von der höheren bzw. tieferen Anzahl Bytes keine Rolle.
 
 \textbf{Partial Range Query}
 \begin{lstlisting}[style=sqlNoTitle]
@@ -402,7 +400,7 @@ Predicate Information (identified by operation id):
               "O_ORDERKEY">=44444 AND "O_CLERK">='Clerk#000000130')
 \end{lstlisting}
 \textbf{Reflexion} \newline
-BLABLA
+Da kein Index vorhanden ist, wird die ganze Tabelle ausgelesen und auf o\_orderkey und o\_clerk gefiltert, die Range Query ist nur um 8 teurer als die letzte Abfrage.
 
 \subsection{Join}
 \begin{lstlisting}[style=sqlNoTitle]
@@ -427,8 +425,8 @@ Predicate Information (identified by operation id):
    2 - filter("O_ORDERKEY"<100)
 \end{lstlisting}
 \textbf{Reflexion} \newline
-Spielen Varianten in der Formulierung eine Rolle?
-//NO DIFFERENCE FOR INNER JOIN
+Da kein Index vorhanden ist, werden beide Tabellen voll geladen. Die orders Tabelle wird gefiltert und mit Hilfe von custkey word ein HASH JOIN ausgeführt.
+Die Formulierung mit INNER JOIN spielt
 
 \section{Versuch mit Index}
 \begin{lstlisting}[style=sql]
@@ -466,7 +464,7 @@ FROM ORDERS;
 ------------------------------------------------------------------------------------
 \end{lstlisting}
 \textbf{Reflexion} \newline
-BLABLA
+Die Verwendung des Index senkt die Kosten dieser abfrage von 6676 auf 1615 (Faktor 4.1).
 
 \subsection{Selektion}
 Exact Point Query
@@ -489,6 +487,9 @@ Predicate Information (identified by operation id):
    2 - access("O_ORDERKEY"=44444)
 \end{lstlisting}
 
+\textbf{Reflexion} \newline
+Die Verwendung des Index senkt die Kosten dieser abfrage von 6602 auf 4 (Faktor 1650).
+
 \begin{lstlisting}[style=sql]
 EXPLAIN PLAN FOR
 SELECT /*+ FULL(orders) */ *
@@ -507,7 +508,7 @@ Predicate Information (identified by operation id):
    1 - filter("O_ORDERKEY"=44444)
 \end{lstlisting}
 \textbf{Reflexion} \newline
-BLABLA
+Wenn ein TABLE ACCESS FULL erzwungen wird, entsprechen die Kosten wieder denen ohne Index.
 
 Partial Point Query
 \begin{lstlisting}[style=sql]
@@ -535,7 +536,7 @@ Predicate Information (identified by operation id):
    7 - access("O_ORDERKEY"=44444)
 \end{lstlisting}
 \textbf{Reflexion} \newline
-BLABLA
+Die Verwendung der Indexes senkt die Kosten von 6611 auf 336 (Faktor 19.7) und führt zu BITMAP Operationen.
 
 \begin{lstlisting}[style=sql]
 EXPLAIN PLAN FOR
@@ -557,7 +558,7 @@ Predicate Information (identified by operation id):
    2 - access("O_ORDERKEY"=44444)
 \end{lstlisting}
 \textbf{Reflexion} \newline
-BLABLA
+Die Verwendung des Index senkt die Kosten dieser Abfrage von 6611 auf 4 (Faktor 1652.8) und ist somit stärker optimiert als die OR Abfrage.
 
 \begin{lstlisting}[style=sql]
 EXPLAIN PLAN FOR
@@ -579,7 +580,7 @@ Predicate Information (identified by operation id):
    2 - access("O_CLERK"='Clerk#000000286')
 \end{lstlisting}
 \textbf{Reflexion} \newline
-BLABLA
+Die Verwendung des Index senkt die Kosten dieser Abfrage von 6615 auf 1464 (Faktor 4.5) sie ist aber, wegen der Multiplikation, um den Faktor 366 langsamer als die vorherige AND Abfrage, im Gegensatz zum Faktor 1.0006 ohne Index.
 
 Range Query
 \begin{lstlisting}[style=sql]
@@ -601,7 +602,7 @@ Predicate Information (identified by operation id):
    2 - access("O_ORDERKEY">=111111 AND "O_ORDERKEY"<=222222)
 \end{lstlisting}
 \textbf{Reflexion} \newline
-Spielt der Intervall eine Rolle?
+Die Verwendung des Index senkt die Kosten dieser Abfrage von 6603 auf 932 (Faktor 7.1). Wird der Intervall genug gross gewählt, z.B. 222222222, wird wieder ein TABLE ACCESS FULL ausgeführt, da der aufwand für die Index Berechnungen grösser wäre.
 
 Partial Range Query
 \begin{lstlisting}[style=sql]
@@ -632,7 +633,7 @@ Predicate Information (identified by operation id):
    9 - access("O_CLERK">='Clerk#000000130' AND "O_CLERK"<='Clerk#000000139')
 \end{lstlisting}
 \textbf{Reflexion} \newline
-BLABLA
+Die Verwendung des Index senkt die Kosten dieser Abfrage von 6611 auf 27 (Faktor 244.9), die Verwendung von 2 Filterkriterien führt wieder zu BITMAP Operationen.
 
 \subsection{Join}
 \begin{lstlisting}[style=sql]
@@ -655,7 +656,7 @@ Predicate Information (identified by operation id):
    1 - access("O_CUSTKEY"="C_CUSTKEY")
 \end{lstlisting}
 \textbf{Reflexion} \newline
-BLABLA
+In diesem Statement wird auf beide Tabellen TABLE ACCESS FULL ausgeführt, die gesetzten Indexes haben keinen Einfluss auf den Ausführungsplan.
 
 \begin{lstlisting}[style=sql]
 EXPLAIN PLAN FOR
@@ -680,8 +681,7 @@ Predicate Information (identified by operation id):
    3 - access("O_ORDERKEY"<100)
 \end{lstlisting}
 \textbf{Reflexion} \newline
-BLABLA
-
+Die Verwendung des Index senkt die Kosten dieser Abfrage von 7555 auf 957 (Faktor 7.9).
 \begin{lstlisting}[style=sql]
 CREATE INDEX c_custkey_ix ON customers(c_custkey);
 \end{lstlisting}
@@ -705,7 +705,7 @@ Predicate Information (identified by operation id):
    1 - access("O_CUSTKEY"="C_CUSTKEY")
 \end{lstlisting}
 \textbf{Reflexion} \newline
-BLABLA
+Auf diese Abfrage hat das setzen des Indexes keinen Einfluss.
 
 Erzwingen eines Nested Loop Joins:
 \begin{lstlisting}[style=sql]
@@ -730,7 +730,7 @@ Predicate Information (identified by operation id):
    4 - access("O_CUSTKEY"="C_CUSTKEY")
 \end{lstlisting}
 \textbf{Reflexion} \newline
-BLABLA
+Das Erzwingen des NESTED LOOPS führt zwar zur Verwendung des Index, steigert aber die Kosten auf von 17514 auf 3007K.
 
 Erzwingen eines Nicht-Hash Joins:
 \begin{lstlisting}[style=sql]
@@ -756,7 +756,7 @@ Predicate Information (identified by operation id):
        filter("O_CUSTKEY"="C_CUSTKEY")
 \end{lstlisting}
 \textbf{Reflexion} \newline
-BLABLA
+Das Erzwingen des NESTED LOOPS führt nicht zur Verwendung des Index, und steigert aber die Kosten auf von 17514 auf 50568.
 
 \section{Quiz}
 \begin{lstlisting}[style=sql]
@@ -769,6 +769,16 @@ AND ps_suppkey=l_suppkey
 AND ((ps_partkey = 5 AND p_type = 'MEDIUM ANODIZED BRASS')
 OR (ps_partkey = 5 AND p_type = 'MEDIUM BRUSHED COPPER'));
 \end{lstlisting}
+<<<<<<< HEAD
+<<<<<<< HEAD
+<<<<<<< HEAD
+
+=======
+>>>>>>> c58155f530456ee83c926463faa0d86483df5448
+=======
+>>>>>>> c58155f530456ee83c926463faa0d86483df5448
+=======
+>>>>>>> c58155f530456ee83c926463faa0d86483df5448
 Ausgangslage:
 \begin{lstlisting}[style=queryexecutionplan]
 ----------------------------------------------------------------------------------
@@ -791,7 +801,7 @@ Predicate Information (identified by operation id):
    4 - filter("PS_PARTKEY"=5)
 \end{lstlisting}
 
-ps\_partkey ist restriktiv:
+Auf ps\_partkey wird gefiltert:
 \begin{lstlisting}[style=sql]
 CREATE INDEX ps_partkey_ix ON partsupps(ps_partkey);
 \end{lstlisting}
@@ -818,7 +828,8 @@ Predicate Information (identified by operation id):
               "P_TYPE"='MEDIUM BRUSHED COPPER')
 \end{lstlisting}
 
-p\_type ist restriktiv:
+Tabelle partsubs wird jetzt mit dem Index gescannt, Kosten von 35577 auf 31055 gesenkt. \\ 
+Auf p\_type wird gefiltert:
 \begin{lstlisting}[style=sql]
 CREATE INDEX p_type_ix ON parts(p_type);
 \end{lstlisting}
@@ -859,7 +870,8 @@ Predicate Information (identified by operation id):
   19 - filter("P_PARTKEY"="PS_PARTKEY" AND ("PS_PARTKEY"=5 AND "P_TYPE"='MEDIUM ANODIZED 
 \end{lstlisting}
 
-l\_partkey ist restriktiv:
+Tabelle parts wird jetzt mit dem Index gescannt, Kosten von 31055 auf 29885 gesenkt. \\ 
+Auf l\_partkey\_ix wird gejoined:
 \begin{lstlisting}[style=sql]
 CREATE INDEX l_partkey_ix ON lineitems(l_partkey);
 \end{lstlisting}
@@ -902,6 +914,8 @@ Predicate Information (identified by operation id):
   20 - access("PS_PARTKEY"="L_PARTKEY")
   21 - filter("PS_SUPPKEY"="L_SUPPKEY")
 \end{lstlisting}
+
+Tabelle lineitems wird jetzt mit dem Index gescannt, Kosten von 29885 auf 308 gesenkt. Die Kosten wurden im gesamten von 35577 auf 308 gesenkt (Faktor 115.5).
 
 Optimierte Abfrage:
 \begin{lstlisting}[style=sql]
