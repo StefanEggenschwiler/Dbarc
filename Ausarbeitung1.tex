@@ -171,7 +171,7 @@ CREATE TABLE lineitems
 AS SELECT *
   FROM dbarc00.lineitems;
 \end{lstlisting}
-
+\newpage
 \section{Statistiken erheben}
 \begin{lstlisting}[style=sql]
 BEGIN
@@ -240,7 +240,7 @@ FROM ORDERS;
 \end{lstlisting}
 \textbf{Reflexion} \newline
 Da weder ein Index, noch ein Filterkriterium gesetzt sind, wird die gesamte Tabelle ausgelesen und zurückgegeben.
-
+\newpage
 \begin{lstlisting}[style=sql]
 EXPLAIN PLAN FOR
 SELECT o_clerk
@@ -295,6 +295,7 @@ Predicate Information (identified by operation id):
 \textbf{Reflexion} \newline
 Da kein Index vorhanden ist, wird die ganze Tabelle ausgelesen und auf o\_orderkey gefiltert.
 
+\newpage
 \textbf{Partial Point Query}
 \begin{lstlisting}[style=sql]
 EXPLAIN PLAN FOR
@@ -356,7 +357,7 @@ Predicate Information (identified by operation id):
 \end{lstlisting}
 \textbf{Reflexion} \newline
 Da kein Index vorhanden ist, wird die ganze Tabelle ausgelesen und auf o\_orderkey und o\_clerk gefiltert, die zusätzliche Multiplikation erhöht die Kosten nur um 4.
-
+\newpage
 \textbf{Range Query}
 \begin{lstlisting}[style=sqlNoTitle]
 EXPLAIN PLAN FOR
@@ -489,7 +490,7 @@ Predicate Information (identified by operation id):
 
 \textbf{Reflexion} \newline
 Die Verwendung des Index senkt die Kosten dieser abfrage von 6602 auf 4 (Faktor 1650).
-
+\newpage
 \begin{lstlisting}[style=sql]
 EXPLAIN PLAN FOR
 SELECT /*+ FULL(orders) */ *
@@ -559,7 +560,7 @@ Predicate Information (identified by operation id):
 \end{lstlisting}
 \textbf{Reflexion} \newline
 Die Verwendung des Index senkt die Kosten dieser Abfrage von 6611 auf 4 (Faktor 1652.8) und ist somit stärker optimiert als die OR Abfrage.
-
+\newpage
 \begin{lstlisting}[style=sql]
 EXPLAIN PLAN FOR
 SELECT *
@@ -682,6 +683,7 @@ Predicate Information (identified by operation id):
 \end{lstlisting}
 \textbf{Reflexion} \newline
 Die Verwendung des Index senkt die Kosten dieser Abfrage von 7555 auf 957 (Faktor 7.9).
+\newpage
 \begin{lstlisting}[style=sql]
 CREATE INDEX c_custkey_ix ON customers(c_custkey);
 \end{lstlisting}
@@ -769,16 +771,6 @@ AND ps_suppkey=l_suppkey
 AND ((ps_partkey = 5 AND p_type = 'MEDIUM ANODIZED BRASS')
 OR (ps_partkey = 5 AND p_type = 'MEDIUM BRUSHED COPPER'));
 \end{lstlisting}
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-
-=======
->>>>>>> c58155f530456ee83c926463faa0d86483df5448
-=======
->>>>>>> c58155f530456ee83c926463faa0d86483df5448
-=======
->>>>>>> c58155f530456ee83c926463faa0d86483df5448
 Ausgangslage:
 \begin{lstlisting}[style=queryexecutionplan]
 ----------------------------------------------------------------------------------
@@ -947,10 +939,147 @@ Predicate Information (identified by operation id):
    4 - access("PS_PARTKEY"="L_PARTKEY" AND "PS_SUPPKEY"="L_SUPPKEY")
    5 - access("P_PARTKEY"="PS_PARTKEY")
 \end{lstlisting}
-\textbf{Reflexion} \newline
-BLABLA
 
 \section{Deep Left Join}
+\begin{lstlisting}[style=sql]
+SELECT *
+FROM orders, lineitems, partsupps, parts
+WHERE orders.o_orderkey = lineitems.l_orderkey
+AND lineitems.l_suppkey = partsupps.ps_suppkey
+AND partsupps.ps_partkey = parts.p_partkey;
+\end{lstlisting}
+\begin{lstlisting}[style=queryexecutionplan]
+------------------------------------------------------------------------------------------
+| Id  | Operation            | Name      | Rows  | Bytes |TempSpc| Cost (%CPU)| Time     |
+------------------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT     |           |   482M|   229G|       |  9176K  (1)| 30:35:13 |
+|*  1 |  HASH JOIN           |           |   482M|   229G|    27M|  9176K  (1)| 30:35:13 |
+|   2 |   TABLE ACCESS FULL  | PARTS     |   200K|    25M|       |  1051   (1)| 00:00:13 |
+|*  3 |   HASH JOIN          |           |   486M|   171G|   118M|   168K  (2)| 00:33:39 |
+|   4 |    TABLE ACCESS FULL | PARTSUPPS |   800K|   109M|       |  4526   (1)| 00:00:55 |
+|*  5 |    HASH JOIN         |           |  6086K|  1369M|   175M| 84027   (1)| 00:16:49 |
+|   6 |     TABLE ACCESS FULL| ORDERS    |  1500K|   158M|       |  6610   (1)| 00:01:20 |
+|   7 |     TABLE ACCESS FULL| LINEITEMS |  6001K|   715M|       | 29752   (1)| 00:05:58 |
+------------------------------------------------------------------------------------------
+
+Predicate Information (identified by operation id):
+---------------------------------------------------
+   1 - access("PARTSUPPS"."PS_PARTKEY"="PARTS"."P_PARTKEY")
+   3 - access("LINEITEMS"."L_SUPPKEY"="PARTSUPPS"."PS_SUPPKEY")
+   5 - access("ORDERS"."O_ORDERKEY"="LINEITEMS"."L_ORDERKEY")
+\end{lstlisting}
+\newpage
+Nach einigem Suchen konnten wir anhand folgenden Statements einen Bushy Tree erzeugen:
+\newline(Quelle: http://dboptimizer.com/2011/12/09/right-deep-left-deep-and-bushy-joins/ )
+\begin{lstlisting}[style=sql]
+SELECT  *
+FROM 
+(
+SELECT /*+ no_merge */ *
+FROM ORDERS, LIMEITEMS
+WHERE ORDERS.o_orderkey = LINEITEMS.l_orderkey
+)
+,
+(
+SELECT /*+ no_merge */ *
+FROM PARTSUPPS, PARTS
+WHERE PARTSUPPS.ps_partkey = PARTS.p_partkey
+)
+WHERE l_suppkey = ps_suppkey;
+\end{lstlisting}
+\begin{lstlisting}[style=queryexecutionplan]
+------------------------------------------------------------------------------------------
+| Id  | Operation            | Name      | Rows  | Bytes |TempSpc| Cost (%CPU)| Time     |
+------------------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT     |           |   482M|   286G|       |   211K  (2)| 00:42:23 |
+|*  1 |  HASH JOIN           |           |   482M|   286G|   234M|   211K  (2)| 00:42:23 |
+|   2 |   VIEW               |           |   792K|   225M|       | 12812   (1)| 00:02:34 |
+|*  3 |    HASH JOIN         |           |   792K|   207M|    27M| 12812   (1)| 00:02:34 |
+|   4 |     TABLE ACCESS FULL| PARTS     |   200K|    25M|       |  1051   (1)| 00:00:13 |
+|   5 |     TABLE ACCESS FULL| PARTSUPPS |   800K|   109M|       |  4526   (1)| 00:00:55 |
+|   6 |   VIEW               |           |  6086K|  1967M|       | 84027   (1)| 00:16:49 |
+|*  7 |    HASH JOIN         |           |  6086K|  1369M|   175M| 84027   (1)| 00:16:49 |
+|   8 |     TABLE ACCESS FULL| ORDERS    |  1500K|   158M|       |  6610   (1)| 00:01:20 |
+|   9 |     TABLE ACCESS FULL| LINEITEMS |  6001K|   715M|       | 29752   (1)| 00:05:58 |
+------------------------------------------------------------------------------------------
+
+Predicate Information (identified by operation id):
+---------------------------------------------------
+   1 - access("L_SUPPKEY"="PS_SUPPKEY")
+   3 - access("PARTSUPPS"."PS_PARTKEY"="PARTS"."P_PARTKEY")
+   7 - access("ORDERS"."O_ORDERKEY"="LINEITEMS"."L_ORDERKEY")
+\end{lstlisting}
+\textbf{Reflexion} \newline
+Beim Vergleichen der beiden Ausführungspläne erkennt man schnell, dass die erste Version eines Deep Left Joins sehr hohe Kosten mit sich bringt. Diese werden v.A. durch das mehrmalige Joinen derselben Tabellen verursacht.\newline
+Im zweiten Statement wird durch das Verwenden von Hints eine Reihenfolge erzwingt, in der die Tabellen gejoined werden sollen und das Mergen wird unterbunden.\newline
+Durch den Ausführungsplan sieht man schnell, dass so ein Bushy Tree erstellt wird. Ausserdem merkt man, dass die Kosten um ein Vielfaches geringer sind als beim ersten Statement. (Um den Faktor 43)\newline
+\newline
+Um die Anfrage weiter zu Beschleunigen haben wir folgende Indizes erstellt:
+\begin{lstlisting}[style=sql]
+CREATE INDEX o_orderkey_ix ON orders(o_orderkey);
+\end{lstlisting}
+\begin{lstlisting}[style=sql]
+CREATE INDEX l_orderkey_ix ON lineitems(l_orderkey);
+\end{lstlisting}
+\begin{lstlisting}[style=sql]
+CREATE INDEX l_suppkey_ix ON lineitems(l_suppkey);
+\end{lstlisting}
+\begin{lstlisting}[style=sql]
+CREATE INDEX ps_suppkey_ix ON partsupps(ps_suppkey);
+\end{lstlisting}
+\begin{lstlisting}[style=sql]
+CREATE INDEX ps_partkey_ix ON partsupps(ps_partkey);
+\end{lstlisting}
+\begin{lstlisting}[style=sql]
+CREATE INDEX p_partkey_ix ON parts(p_partkey);
+\end{lstlisting}
+Deep Left Join:
+\begin{lstlisting}[style=queryexecutionplan]
+------------------------------------------------------------------------------------------
+| Id  | Operation            | Name      | Rows  | Bytes |TempSpc| Cost (%CPU)| Time     |
+------------------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT     |           |   482M|   229G|       |  9176K  (1)| 30:35:13 |
+|*  1 |  HASH JOIN           |           |   482M|   229G|    27M|  9176K  (1)| 30:35:13 |
+|   2 |   TABLE ACCESS FULL  | PARTS     |   200K|    25M|       |  1051   (1)| 00:00:13 |
+|*  3 |   HASH JOIN          |           |   486M|   171G|   118M|   168K  (2)| 00:33:39 |
+|   4 |    TABLE ACCESS FULL | PARTSUPPS |   800K|   109M|       |  4526   (1)| 00:00:55 |
+|*  5 |    HASH JOIN         |           |  6086K|  1369M|   175M| 84027   (1)| 00:16:49 |
+|   6 |     TABLE ACCESS FULL| ORDERS    |  1500K|   158M|       |  6610   (1)| 00:01:20 |
+|   7 |     TABLE ACCESS FULL| LINEITEMS |  6001K|   715M|       | 29752   (1)| 00:05:58 |
+------------------------------------------------------------------------------------------
+ 
+Predicate Information (identified by operation id):
+---------------------------------------------------
+   1 - access("PARTSUPPS"."PS_PARTKEY"="PARTS"."P_PARTKEY")
+   3 - access("LINEITEMS"."L_SUPPKEY"="PARTSUPPS"."PS_SUPPKEY")
+   5 - access("ORDERS"."O_ORDERKEY"="LINEITEMS"."L_ORDERKEY")
+\end{lstlisting}
+
+Bushy Tree:
+\begin{lstlisting}[style=queryexecutionplan]
+------------------------------------------------------------------------------------------
+| Id  | Operation            | Name      | Rows  | Bytes |TempSpc| Cost (%CPU)| Time     |
+------------------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT     |           |   482M|   286G|       |   211K  (2)| 00:42:23 |
+|*  1 |  HASH JOIN           |           |   482M|   286G|   234M|   211K  (2)| 00:42:23 |
+|   2 |   VIEW               |           |   792K|   225M|       | 12812   (1)| 00:02:34 |
+|*  3 |    HASH JOIN         |           |   792K|   207M|    27M| 12812   (1)| 00:02:34 |
+|   4 |     TABLE ACCESS FULL| PARTS     |   200K|    25M|       |  1051   (1)| 00:00:13 |
+|   5 |     TABLE ACCESS FULL| PARTSUPPS |   800K|   109M|       |  4526   (1)| 00:00:55 |
+|   6 |   VIEW               |           |  6086K|  1967M|       | 84027   (1)| 00:16:49 |
+|*  7 |    HASH JOIN         |           |  6086K|  1369M|   175M| 84027   (1)| 00:16:49 |
+|   8 |     TABLE ACCESS FULL| ORDERS    |  1500K|   158M|       |  6610   (1)| 00:01:20 |
+|   9 |     TABLE ACCESS FULL| LINEITEMS |  6001K|   715M|       | 29752   (1)| 00:05:58 |
+------------------------------------------------------------------------------------------
+ 
+Predicate Information (identified by operation id):
+---------------------------------------------------
+   1 - access("L_SUPPKEY"="PS_SUPPKEY")
+   3 - access("PARTSUPPS"."PS_PARTKEY"="PARTS"."P_PARTKEY")
+   7 - access("ORDERS"."O_ORDERKEY"="LINEITEMS"."L_ORDERKEY")
+\end{lstlisting}
+\textbf{Reflexion} \newline
+Wir haben festgestellt, dass der Oracle Optimizer die Verwendung von Indizes sowohl beim Bushy Tree, als auch beim Left Deep Join unterbunden hat, weswegen die Performance nicht weiter verbessert werden konnte.
 
 \section{Eigene SQL-Abfragen}
 
