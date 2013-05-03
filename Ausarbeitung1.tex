@@ -1051,6 +1051,60 @@ Predicate Information (identified by operation id):
 Wir haben festgestellt, dass der Oracle Optimizer die Verwendung von Indizes sowohl beim Bushy Tree, als auch beim Left Deep Join unterbunden hat, weswegen die Performance nicht weiter verbessert werden konnte.
 
 \section{Eigene SQL-Abfragen}
+\begin{lstlisting}[style=sql]
+EXPLAIN PLAN FOR
+SELECT *
+FROM lineitems, orders
+WHERE l_orderkey=o_orderkey
+AND o_orderkey BETWEEN 100 AND  1000;
+\end{lstlisting}
+Ergibt ohne Index folgenden Aufsführungsplan:
+\begin{lstlisting}[style=queryexecutionplan]
+--------------------------------------------------------------------------------
+| Id  | Operation          | Name      | Rows  | Bytes | Cost (%CPU)| Time     |
+--------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT   |           |   227 | 53572 | 36282   (1)| 00:07:16 |
+|*  1 |  HASH JOIN         |           |   227 | 53572 | 36282   (1)| 00:07:16 |
+|*  2 |   TABLE ACCESS FULL| ORDERS    |   227 | 25197 |  6602   (1)| 00:01:20 |
+|*  3 |   TABLE ACCESS FULL| LINEITEMS |   908 |   110K| 29679   (1)| 00:05:57 |
+--------------------------------------------------------------------------------
+ 
+Predicate Information (identified by operation id):
+---------------------------------------------------
+ 
+   1 - access("L_ORDERKEY"="O_ORDERKEY")
+   2 - filter("O_ORDERKEY"<=1000 AND "O_ORDERKEY">=100)
+   3 - filter("L_ORDERKEY"<=1000 AND "L_ORDERKEY">=100)
+\end{lstlisting}
+
+Nun setzten wir je einen Index auf o\_orderkey und l\_orderkey.
+
+\begin{lstlisting}[style=sql]
+CREATE INDEX l_orderkey_ix ON lineitems(l_orderkey);
+CREATE INDEX o_orderkey_ix ON orders(o_orderkey);
+\end{lstlisting}
+
+\begin{lstlisting}[style=queryexecutionplan]
+----------------------------------------------------------------------------------------------
+| Id  | Operation                    | Name          | Rows  | Bytes | Cost (%CPU)| Time     |
+----------------------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT             |               |   227 | 53572 |    51   (2)| 00:00:01 |
+|*  1 |  HASH JOIN                   |               |   227 | 53572 |    51   (2)| 00:00:01 |
+|   2 |   TABLE ACCESS BY INDEX ROWID| ORDERS        |   227 | 25197 |    11   (0)| 00:00:01 |
+|*  3 |    INDEX RANGE SCAN          | O_ORDERKEY_IX |   227 |       |     3   (0)| 00:00:01 |
+|   4 |   TABLE ACCESS BY INDEX ROWID| LINEITEMS     |   908 |   110K|    39   (0)| 00:00:01 |
+|*  5 |    INDEX RANGE SCAN          | L_ORDERKEY_IX |   908 |       |     5   (0)| 00:00:01 |
+----------------------------------------------------------------------------------------------
+ 
+Predicate Information (identified by operation id):
+---------------------------------------------------
+ 
+   1 - access("L_ORDERKEY"="O_ORDERKEY")
+   3 - access("O_ORDERKEY">=100 AND "O_ORDERKEY"<=1000)
+   5 - access("L_ORDERKEY">=100 AND "L_ORDERKEY"<=1000)
+\end{lstlisting}
+
+Durch Verwendung der Indexes konnten die Kost von 36282 auf 51 gesenkt weden (Faktor 711).
 
 % Inhalt Ende
 \end{document} 
