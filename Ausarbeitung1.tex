@@ -909,37 +909,6 @@ Predicate Information (identified by operation id):
 
 Tabelle lineitems wird jetzt mit dem Index gescannt, Kosten von 29885 auf 308 gesenkt. Die Kosten wurden im gesamten von 35577 auf 308 gesenkt (Faktor 115.5).
 
-Optimierte Abfrage:
-\begin{lstlisting}[style=sql]
-EXPLAIN PLAN FOR
-SELECT count(*)
-FROM parts, partsupps, lineitems, orders
-WHERE p_partkey=ps_partkey
-AND ps_partkey=l_partkey
-AND ps_suppkey=l_suppkey
-AND l_orderkey=o_orderkey
-\end{lstlisting}
-\begin{lstlisting}[style=queryexecutionplan]
--------------------------------------------------------------------------------------------
-| Id  | Operation             | Name      | Rows  | Bytes |TempSpc| Cost (%CPU)| Time     |
--------------------------------------------------------------------------------------------
-|   0 | SELECT STATEMENT      |           |     1 |    35 |       | 54346   (1)| 00:10:53 |
-|   1 |  SORT AGGREGATE       |           |     1 |    35 |       |            |          |
-|*  2 |   HASH JOIN           |           |   803K|    26M|    25M| 54346   (1)| 00:10:53 |
-|   3 |    TABLE ACCESS FULL  | ORDERS    |  1500K|  8789K|       |  6599   (1)| 00:01:20 |
-|*  4 |    HASH JOIN          |           |   792K|    21M|    19M| 44915   (1)| 00:08:59 |
-|*  5 |     HASH JOIN         |           |   792K|    10M|  3328K|  6540   (1)| 00:01:19 |
-|   6 |      TABLE ACCESS FULL| PARTS     |   200K|   976K|       |  1050   (1)| 00:00:13 |
-|   7 |      TABLE ACCESS FULL| PARTSUPPS |   800K|  7031K|       |  4523   (1)| 00:00:55 |
-|   8 |     TABLE ACCESS FULL | LINEITEMS |  6001K|    85M|       | 29675   (1)| 00:05:57 |
--------------------------------------------------------------------------------------------
-Predicate Information (identified by operation id):
----------------------------------------------------
-   2 - access("L_ORDERKEY"="O_ORDERKEY")
-   4 - access("PS_PARTKEY"="L_PARTKEY" AND "PS_SUPPKEY"="L_SUPPKEY")
-   5 - access("P_PARTKEY"="PS_PARTKEY")
-\end{lstlisting}
-
 \section{Deep Left Join}
 \begin{lstlisting}[style=sql]
 SELECT *
