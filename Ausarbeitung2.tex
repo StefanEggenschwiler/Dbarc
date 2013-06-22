@@ -1,0 +1,443 @@
+\documentclass[10pt]{scrreprt}
+
+%Math
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsthm}
+\usepackage{ulem}
+\usepackage{stmaryrd} %f\UTF{00FC}r Blitz!
+
+%PageStyle
+\usepackage[ngerman]{babel} % deutsche Silbentrennung
+\usepackage[utf8]{inputenc}
+\usepackage{fancyhdr, graphicx}
+\usepackage[scaled=0.92]{helvet}
+\usepackage{enumitem}
+\usepackage{parskip}
+\usepackage[a4paper,top=2cm]{geometry}
+\usepackage{framed}
+\setlength{\textwidth}{17cm}
+\setlength{\oddsidemargin}{-0.5cm}
+
+% Shortcommands
+\newcommand{\Bold}[1]{\textbf{#1}} %Boldface
+\newcommand{\Kursiv}[1]{\textit{#1}} %Italic
+\newcommand{\T}[1]{\text{#1}} %Textmode
+\newcommand{\Nicht}[1]{\T{\sout{$ #1 $}}} %Streicht Shit durch
+
+%Arrows
+\newcommand{\lra}{\leftrightarrow}
+\newcommand{\ra}{\rightarrow}
+\newcommand{\la}{\leftarrow}
+\newcommand{\lral}{\longleftrightarrow}
+\newcommand{\ral}{\longrightarrow}
+\newcommand{\lal}{\longleftarrow}
+\newcommand{\Lra}{\Leftrightarrow}
+\newcommand{\Ra}{\Rightarrow}
+\newcommand{\La}{\Leftarrow}
+\newcommand{\Lral}{\Longleftrightarrow}
+\newcommand{\Ral}{\Longrightarrow}
+\newcommand{\Lal}{\Longleftarrow}
+
+% Code listenings
+\usepackage{color}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{caption}
+\DeclareCaptionFont{white}{\color{black}}
+\DeclareCaptionFormat{listing}{\colorbox{white}{\parbox{\textwidth}{#1#2#3}}}
+\captionsetup[lstlisting]{format=listing,labelfont=white,textfont=white,font=bf}
+
+
+\lstdefinestyle{sqlNoTitle}{
+   language=SQL,
+   basicstyle=\footnotesize\ttfamily, % Standardschrift
+   backgroundcolor=\color[RGB]{255,255,0}, % Hintergrundfarbe
+   numbers=left, % Ort der Zeilennummern
+   numberstyle=\tiny, % Stil der Zeilennummern
+   stepnumber=1, % Abstand zwischen den Zeilennummern
+   numbersep=5pt, % Abstand der Nummern zum Text
+   tabsize=2, % Groesse von Tabs
+   extendedchars=true, %
+   breaklines=true, % Zeilen werden Umgebrochen
+   frame=trbl, % Rahmen
+   stringstyle=\color[RGB]{42,0,255} \ttfamily, % Farbe der String
+   keywordstyle=\color[RGB]{127,0,85} \bfseries, % Farbe der Keywords
+   commentstyle=\color[RGB]{63,127,95} \ttfamily, % Farbe des Kommentars
+   showspaces=false, % Leerzeichen anzeigen ?
+   showtabs=false, % Tabs anzeigen ?
+   xleftmargin=17pt,
+   framexleftmargin=17pt,
+   framexrightmargin=5pt,
+   framexbottommargin=5pt,
+   framextopmargin=5pt,
+   showstringspaces=false, % Leerzeichen in Strings anzeigen ?
+}
+
+
+\lstdefinestyle{sql}{
+   style=sqlNoTitle,
+   % title=SQL-Query
+}
+
+\lstdefinestyle{queryexecutionplan}{
+  basicstyle=\scriptsize\ttfamily, % Standardschrift
+  backgroundcolor=\color[RGB]{238,233,233}, % Hintergrundfarbe
+  frame=trbl, % Rahmen
+  %title=Ausführungsplan
+}
+
+%Config
+\renewcommand{\headrulewidth}{0pt}
+\setlength{\headheight}{15.2pt}
+
+%Metadata
+\fancyfoot[C]{}
+\title{
+\vspace{4cm}
+\huge{Datenbank Architektur für Fortgeschrittene}\\
+\vspace{0.2cm}
+\Large{Ausarbeitung 2: Zugriffssteuerung und Views}\\
+}
+\author{Daniel Gürber \cr Stefan Eggenschwiler}
+\date{21.06.2013}
+
+% hier beginnt das Dokument
+\begin{document}
+
+% Titelbild
+\maketitle
+\thispagestyle{fancy}
+
+\newpage
+
+% Inhaltsverzeichnis
+\pagenumbering{Roman}
+\tableofcontents	
+
+
+\newpage
+\setcounter{page}{1}
+\pagenumbering{arabic}
+
+% Inhalt Start
+\chapter{Oracle 11g}
+\section{Vorbereitung}
+\subsection{Einrichten User}
+\begin{lstlisting}[style=sql]
+CREATE USER nutzer01 IDENTIFIED BY nutzer01;
+CREATE USER nutzer02 IDENTIFIED BY nutzer02;
+
+GRANT CREATE SESSION TO nutzer01;
+GRANT CREATE SESSION TO nutzer02;
+
+GRANT CREATE ROLE TO scott;
+GRANT CREATE VIEW TO scott;
+\end{lstlisting}
+
+\section{Zugriffssteuerung mit User und Rollen}
+\subsection{Tabellen erzeugen}
+\begin{lstlisting}[style=sql]
+DROP TABLE klassen;
+DROP TABLE studenten;
+
+CREATE TABLE klassen(
+k_id number(9),
+k_bezeichnung VARCHAR2(20),
+k_zimmer VARCHAR2(10),
+k_server VARCHAR2(10));
+
+CREATE TABLE studenten(
+s_id number(9),
+s_name VARCHAR2(10),
+s_vname VARCHAR2(10),
+s_tel VARCHAR2(20),
+s_konto_stand NUMBER(9 ),
+s_klasse NUMBER(9));
+
+
+INSERT INTO klassen values ( 10, 'ia00', '3333' , 'pluto');
+INSERT INTO klassen values ( 20, 'ia01', '2222' , 'saturn');
+
+INSERT INTO studenten values( 101, 'meier', 'hans', '11111', 5000, 10);
+INSERT INTO studenten values( 102, 'hirt', 'otto', '22222', -100, 10);
+INSERT INTO studenten values( 103, 'kok', 'thomas', '33333', 1000, 20);
+INSERT INTO studenten values( 104, 'guzman', 'anna', '44444', 3000, 20);
+INSERT INTO studenten values( 105, 'lorch', 'felix', '45678', 7000, 20);
+\end{lstlisting}
+\subsection{View erstellen}
+\begin{lstlisting}[style=sql]
+CREATE VIEW view1 AS
+select s_name, s_vname, k_zimmer, k_server
+FROM studenten, klassen
+WHERE s_klasse = k_id
+\end{lstlisting}
+
+\subsection{Rollen definieren}
+\begin{lstlisting}[style=sql]
+CREATE ROLE view1_verwalter;
+CREATE ROLE view1_nutzer;
+\end{lstlisting}
+
+\subsection{Den Rollen Rechte zuweisen}
+\begin{lstlisting}[style=sql]
+GRANT INSERT,SELECT,UPDATE,DELETE ON studenten TO view1_verwalter;
+GRANT INSERT,SELECT,UPDATE,DELETE ON klassen TO view1_verwalter;
+\end{lstlisting}
+
+\begin{lstlisting}[style=sql]
+GRANT SELECT ON view1 TO view1_nutzer;
+\end{lstlisting}
+
+\subsection{Den User Rollen zuweisen}
+\begin{lstlisting}[style=sql]
+GRANT view1_verwalter TO nutzer01;
+GRANT view1_nutzer TO nutzer02;
+\end{lstlisting}
+
+\subsection{Überprüfung der Rechte der beiden Rollen}
+\subsubsection{Was kann der Verwalter lesen und bearbeiten?}
+\begin{lstlisting}[style=sql]
+SELECT * FROM scott.studenten;
+INSERT INTO scott.studenten VALUES (106, 'peter', 'muster', 12345,2000,20);
+UPDATE scott.studenten SET s_tel = 54321 WHERE s_id = 106;
+DELETE FROM scott.studenten WHERE s_id = 106;
+
+SELECT * FROM scott.klassen;
+INSERT INTO scott.klassen VALUES (30, 'ia02', 1111, 'uranus');
+UPDATE scott.klassen SET k_zimmer = 4444 WHERE k_id = 30;
+DELETE FROM scott.klassen WHERE k_id = 30;
+
+SELECT * FROM scott.view1;
+INSERT INTO scott.view1 VALUES ('peter','muster',2222,'saturn');
+UPDATE scott.view1 SET s_name = 'kook' WHERE s_vname = 'thomas';
+DELETE FROM scott.view1 WHERE s_vname = 'thomas';
+\end{lstlisting}
+ORA-00942: Tabelle oder View nicht vorhanden
+\subsubsection{Was kann der Nutzer lesen und bearbeiten?}
+ORA-00942: Tabelle oder View nicht vorhanden
+ORA-01031: Nicht ausreichende Berechtigungen
+\section{Zugriffsrechte: Objekt- und Systemrechte}
+\subsection{Objektrechte}
+Als scott:
+\begin{lstlisting}[style=sql]
+CREATE VIEW view2 AS
+select s_name, s_vname, k_zimmer, k_server
+FROM studenten, klassen
+WHERE s_klasse = k_id;
+
+GRANT SELECT ON view2 TO nutzer01 WITH GRANT OPTION;
+\end{lstlisting}
+
+Als nutzer01:
+\begin{lstlisting}[style=sql]
+GRANT SELECT ON scott view2 TO nutzer02;
+\end{lstlisting}
+Erfolgreich.
+
+Als nutzer02:
+\begin{lstlisting}[style=sql]
+SELECT * FROM scott view2;
+\end{lstlisting}
+Erfolgreich.
+
+Als scott:
+\begin{lstlisting}[style=sql]
+REVOKE SELECT ON view2 FROM nutzer01;
+\end{lstlisting}
+
+Als nutzer02:
+\begin{lstlisting}[style=sql]
+SELECT * FROM scott view2;
+\end{lstlisting}
+ORA-00942: Tabelle oder View nicht vorhanden
+
+\subsection{Systemrechte}
+Als system:
+\begin{lstlisting}[style=sql]
+REVOKE create session FROM nutzer01;
+REVOKE create session FROM nutzer02;
+\end{lstlisting}
+ORA-01045: user STUDENT02 lacks CREATE SESSION privilege; logon denied.
+
+Als system:
+\begin{lstlisting}[style=sql]
+GRANT create session TO nutzer01 WITH ADMIN OPTION;
+\end{lstlisting}
+
+als nutzer01:
+\begin{lstlisting}[style=sql]
+GRANT create session TO nutzer02;
+\end{lstlisting}
+Beide können Sessions erstellen.
+
+Als system:
+\begin{lstlisting}[style=sql]
+REVOKE create session FROM nutzer01;
+\end{lstlisting}
+nutzer02 kann IMMERNOCH Sessions erstellen. (Keine Kaskade)
+
+\section{Views}
+\subsection{Rechte von Views}
+als system:
+\begin{lstlisting}[style=sql]
+GRANT CREATE VIEW TO nutzer01;
+\end{lstlisting}
+
+als nutzer01:
+\begin{lstlisting}[style=sql]
+CREATE VIEW cheat_view AS
+SELECT * FROM scott.studenten
+\end{lstlisting}
+ORA-01031: Nicht ausreichende Berechtigungen
+
+als system:
+\begin{lstlisting}[style=sql]
+GRANT CREATE ANY VIEW TO nutzer01;
+\end{lstlisting}
+
+als nutzer01:
+ORA-01031: Nicht ausreichende Berechtigungen
+
+als system:
+\begin{lstlisting}[style=sql]
+GRANT INSERT,SELECT,UPDATE,DELETE ON scott.studenten TO nutzer01;
+\end{lstlisting}
+
+als nutzer01:
+erfolgreich
+
+als nutzer01:
+\begin{lstlisting}[style=sql]
+GRANT SELECT ON cheat_view TO nutzer02;
+\end{lstlisting}
+
+als nutzer02:
+\begin{lstlisting}[style=sql]
+CREATE VIEW cheat_view AS
+SELECT * FROM scott.studenten
+\end{lstlisting}
+ORA-01720: Berechtigungsoptionen für 'SCOTT.STUDENTEN' nicht vorhanden
+
+\subsection{DDL-Änderungen an den Basistabellen}
+als scott:
+\begin{lstlisting}[style=sql]
+ALTER TABLE studenten ADD birthday TIMESTAMP;
+\end{lstlisting}
+
+\begin{lstlisting}[style=sql]
+SELECT * FROM view1;
+\end{lstlisting}
+Kein Problem, da view1 nicht beeinträchtigt wird.
+
+\begin{lstlisting}[style=sql]
+ALTER TABLE studenten DROP COLUMN birthday;
+\end{lstlisting}
+
+\begin{lstlisting}[style=sql]
+ALTER TABLE studenten DROP COLUMN s_name;
+\end{lstlisting}
+
+\begin{lstlisting}[style=sql]
+SELECT * FROM view1;
+\end{lstlisting}
+ORA-04063: view "view1" enthält Fehler
+
+\begin{lstlisting}[style=sql]
+ALTER TABLE studenten ADD s_name VARCHAR2(10);
+\end{lstlisting}
+Fixed.
+
+\subsection{Updatable Views}
+als scott:
+\begin{lstlisting}[style=sql]
+CREATE VIEW view_distinct AS
+SELECT DISTINCT s_vname
+FROM studenten;
+
+UPDATE view_distinct SET s_vname='ana' WHERE s_vname='anna';
+\end{lstlisting}
+ORA-01732: Datenmanipulationsoperation auf dieser View nicht zulässig
+
+\begin{lstlisting}[style=sql]
+CREATE VIEW view_all AS
+SELECT *
+FROM studenten
+INNER JOIN klassen ON s_klassen=k_id;
+\end{lstlisting}
+
+\begin{lstlisting}[style=sql]
+SELECT * FROM view_all;
+
+UPDATE view_all SET s_name='muster' WHERE s_id=101;
+\end{lstlisting}
+ORA-01779: Kann keine Spalte, die einer Basistabelle zugewiesen wird, verändern
+
+\begin{lstlisting}[style=sql]
+ALTER TABLE studenten
+ADD CONSTRAINT STUDENT_PK PRIMARY KEY ( S_ID ) ENABLE;
+
+ALTER TABLE klassen
+ADD CONSTRAINT KLASSE_PK PRIMARY KEY ( K_ID ) ENABLE;
+\end{lstlisting}
+
+\begin{lstlisting}[style=sql]
+UPDATE view_all SET s_name='muster' WHERE s_id=101;
+\end{lstlisting}
+erfolgreich aktualisiert.
+
+\begin{lstlisting}[style=sql]
+UPDATE view_all SET k_bezeichnung='test' WHERE k_id=10;
+\end{lstlisting}
+ORA-01779: Kann keine Spalte, die einer Basistabelle zugewiesen wird, verändern
+
+\subsection{WITH CHECK OPTION}
+\begin{lstlisting}[style=sql]
+CREATE VIEW v1 AS
+SELECT *
+FROM studenten
+WHERE s_klasse = 20 WITH CHECK OPTION;
+\end{lstlisting}
+
+\begin{lstlisting}[style=sql]
+CREATE VIEW v2 AS
+SELECT *
+FROM v1
+WHERE s_tel < 40000
+\end{lstlisting}
+
+\begin{lstlisting}[style=sql]
+INSER INTO v2 VALUES (200, 'muster', 'peter', 40001, 2000, 20);
+INSER INTO v2 VALUES (201, 'muster', 'peter', 40001, 2000, 10);
+\end{lstlisting}
+ORA-01402: Verletzung der WHERE-Klausel einer View WITH CHECK OPTION
+
+\begin{lstlisting}[style=sql]
+CREATE VIEW v3 AS
+SELECT *
+FROM v2
+WHERE s_vname='peter' WITH CHECK OPTION;
+\end{lstlisting}
+
+\begin{lstlisting}[style=sql]
+INSER INTO v3 VALUES (202, 'muster', 'thomas', 30000, 2000, 20);
+\end{lstlisting}
+ORA-01402: Verletzung der WHERE-Klausel einer View WITH CHECK OPTION
+
+\begin{lstlisting}[style=sql]
+INSER INTO v3 VALUES (202, 'muster', 'peter', 30000, 2000, 20);
+\end{lstlisting}
+Funktioniert.
+
+\begin{lstlisting}[style=sql]
+INSER INTO v3 VALUES (203, 'muster', 'thomas', 30000, 2000, 10);
+\end{lstlisting}
+ORA-01402: Verletzung der WHERE-Klausel einer View WITH CHECK OPTION
+
+\begin{lstlisting}[style=sql]
+INSER INTO v3 VALUES (204, 'muster', 'thomas', 40000, 2000, 20);
+\end{lstlisting}
+ORA-01402: Verletzung der WHERE-Klausel einer View WITH CHECK OPTION
+% Inhalt Ende
+\end{document} 
