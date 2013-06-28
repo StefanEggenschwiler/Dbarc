@@ -1,0 +1,533 @@
+{\rtf1\ansi\ansicpg1252\cocoartf1187\cocoasubrtf390
+{\fonttbl\f0\fmodern\fcharset0 Courier-Bold;\f1\fmodern\fcharset0 Courier;}
+{\colortbl;\red255\green255\blue255;\red0\green0\blue192;\red135\green59\blue4;\red107\green0\blue3;
+}
+\paperw11900\paperh16840\margl1440\margr1440\vieww10800\viewh8400\viewkind0
+\deftab720
+\pard\pardeftab720
+
+\f0\b\fs24 \cf2 \\chapter
+\f1\b0 \cf0 \{MySQL\}\
+F\'fcr diese Ausarbeitung verwenden wir XAMPP 1.7.3 mit MySQL 5.5.27.\
+
+\f0\b \cf2 \\section
+\f1\b0 \cf0 \{Vorbereitung\}\
+
+\f0\b \cf2 \\subsection
+\f1\b0 \cf0 \{Einrichtung User\}\
+\pard\pardeftab720
+\cf2 \\begin\cf0 \{lstlisting\}\cf3 [style=sql]\cf0 \
+\pard\pardeftab720
+\cf3 CREATE USER scott@localhost IDENTIFIED BY 'tiger';\cf0 \
+\cf3 CREATE USER nutzer01@localhost IDENTIFIED BY 'nutzer01';\cf0 \
+\cf3 CREATE USER nutzer02@localhost IDENTIFIED BY 'nutzer02';\cf0 \
+\cf3 GRANT ALL PRIVILEGES ON `dbarc03` . * TO 'scott'@'localhost';\cf0 \
+\pard\pardeftab720
+\cf2 \\end\cf0 \{lstlisting\}\
+Bei MySQL muss bei der Erstellung von Benutzern neben dem Namen und der Identifizierungsmethode auch definiert werden vom welchem Server aus sich der Nutzereinloggen darf. Da unser MySQL Server lokal l\'e4uft, wird hier 'localhost' angegeben. Daneben gibt es auch IP und Servername, sowie die Berechtigung ohne Einschr\'e4nkungen (\cf4 \\\cf0 %) und die Regelung der Zugriffe per Hosttabelle.\
+\pard\pardeftab720
+
+\f0\b \cf2 \\subsection
+\f1\b0 \cf0 \{Einrichtung Datenbank\}\
+\pard\pardeftab720
+\cf2 \\begin\cf0 \{lstlisting\}\cf3 [style=sql]\cf0 \
+\pard\pardeftab720
+\cf3 CREATE DATABASE dbarc03;\cf0 \
+\pard\pardeftab720
+\cf2 \\end\cf0 \{lstlisting\}\
+\
+\pard\pardeftab720
+
+\f0\b \cf2 \\section
+\f1\b0 \cf0 \{Zugriffssteuerung mit User und Rollen\}\
+
+\f0\b \cf2 \\subsection
+\f1\b0 \cf0 \{Tabellen erzeugen\}\
+Als Benutzer 'scott':\
+\pard\pardeftab720
+\cf2 \\begin\cf0 \{lstlisting\}\cf3 [style=sql]\cf0 \
+\pard\pardeftab720
+\cf3 CREATE TABLE studenten(\cf0 \
+\cf3 s_id int(9) PRIMARY KEY,\cf0 \
+\cf3 s_name VARCHAR(10),\cf0 \
+\cf3 s_vname VARCHAR(10),\cf0 \
+\cf3 s_tel VARCHAR(20),\cf0 \
+\cf3 s_konto_stand int(9),\cf0 \
+\cf3 s_klasse int(9));\cf0 \
+\
+\cf3 CREATE TABLE klassen(\cf0 \
+\cf3 k_id int(9),\cf0 \
+\cf3 k_bezeichnung VARCHAR(20),\cf0 \
+\cf3 k_zimmer VARCHAR(10),\cf0 \
+\cf3 k_server VARCHAR(10));\cf0 \
+\
+\cf3 INSERT INTO klassen values( 10, 'ia00', '3333' , 'pluto');\cf0 \
+\cf3 INSERT INTO klassen values( 20, 'ia01', '2222' , 'saturn');\cf0 \
+\
+\cf3 INSERT INTO studenten values( 101, 'meier', 'hans', '11111', 5000, 10);\cf0 \
+\cf3 INSERT INTO studenten values( 102, 'hirt', 'otto', '22222', -100, 10);\cf0 \
+\cf3 INSERT INTO studenten values( 103, 'kok', 'thomas', '33333', 1000, 20);\cf0 \
+\cf3 INSERT INTO studenten values( 104, 'guzman', 'anna', '44444', 3000, 20);\cf0 \
+\cf3 INSERT INTO studenten values( 105, 'lorch', 'felix', '45678', 7000, 20);\cf0 \
+\pard\pardeftab720
+\cf2 \\end\cf0 \{lstlisting\}\
+\
+\pard\pardeftab720
+
+\f0\b \cf2 \\subsection
+\f1\b0 \cf0 \{View erstellen\}\
+\pard\pardeftab720
+\cf2 \\begin\cf0 \{lstlisting\}\cf3 [style=sql]\cf0 \
+\pard\pardeftab720
+\cf3 CREATE VIEW view1 AS\cf0 \
+\cf3 SELECT s_name, s_vname, k_zimmer, k_server\cf0 \
+\cf3 FROM studenten, klassen\cf0 \
+\cf3 WHERE s_klasse = k_id\cf0 \
+\pard\pardeftab720
+\cf2 \\end\cf0 \{lstlisting\}\
+\
+\pard\pardeftab720
+
+\f0\b \cf2 \\subsection
+\f1\b0 \cf0 \{Rechte an User verteilen\}\
+Als 'root':\
+\pard\pardeftab720
+\cf2 \\begin\cf0 \{lstlisting\}\cf3 [style=sql]\cf0 \
+\pard\pardeftab720
+\cf3 REVOKE ALL PRIVILEGES ON `dbarc03` . * FROM scott@localhost;\cf0 \
+\cf3 GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, DROP, INDEX, ALTER, CREATE\cf0 \
+\cf3 VIEW, SHOW VIEW\cf0 \
+\cf3 ON `dbarc03` . *\cf0 \
+\cf3 TO scott@localhost WITH GRANT OPTION;\cf0 \
+\pard\pardeftab720
+\cf2 \\end\cf0 \{lstlisting\}\
+Scott kann nun seine Rechte frei weitergeben.\
+\
+Als Benutzer 'scott':\
+\cf2 \\begin\cf0 \{lstlisting\}\cf3 [style=sql]\cf0 \
+\pard\pardeftab720
+\cf3 GRANT SELECT, INSERT, UPDATE, DELETE ON studenten TO\cf0 \
+\cf3 nutzer01@localhost;\cf0 \
+\
+\cf3 GRANT SELECT, INSERT, UPDATE, DELETE ON klassen TO\cf0 \
+\cf3 nutzer01@localhost;\cf0 \
+\
+\cf3 GRANT SELECT ON view1 TO nutzer02@localhost;\cf0 \
+\pard\pardeftab720
+\cf2 \\end\cf0 \{lstlisting\}\
+In MySQL gibt es, im Gegensatz zu Oracle, keine Rollen. Man muss also jedem Nutzer die Rechte direkt zuteilen.\cf4 \\newline\cf0 \
+Deswegen gibt hier 'scott' dem Benutzer 'nutzer01' select-, insert-, update- und delete-Rechte f\'fcr die beiden Tabellen 'studenten' und 'klassen' und dem Benutzer 'nutzer02' select-Rechte an der View 'view1'.\cf4 \\newline\\newline\cf0 \
+\
+\pard\pardeftab720
+
+\f0\b \cf2 \\subsection
+\f1\b0 \cf0 \{\'dcberpr\'fcfung der Rechte der beiden Nutzer\}\
+\pard\pardeftab720
+\cf4 \\Bold\cf0 \{Statement 1\}\
+\pard\pardeftab720
+\cf2 \\begin\cf0 \{lstlisting\}\cf3 [style=sql]\cf0 \
+\pard\pardeftab720
+\cf3 SELECT * FROM dbarc03.studenten;\cf0 \
+\cf3 INSERT INTO dbarc03.studenten VALUES (106, 'peter', 'muster', 12345,2000,20);\cf0 \
+\cf3 UPDATE dbarc03.studenten SET s_tel = 54321 WHERE s_id = 106;\cf0 \
+\cf3 DELETE FROM dbarc03.studenten WHERE s_id = 106;\cf0 \
+\pard\pardeftab720
+\cf2 \\end\cf0 \{lstlisting\}\
+\pard\pardeftab720
+\cf4 \\Bold\cf0 \{Statement 2\}\
+\pard\pardeftab720
+\cf2 \\begin\cf0 \{lstlisting\}\cf3 [style=sql]\cf0 \
+\pard\pardeftab720
+\cf3 SELECT * FROM dbarc03.klassen;\cf0 \
+\cf3 INSERT INTO dbarc03.klassen VALUES (30, 'ia02', 1111, 'uranus');\cf0 \
+\cf3 UPDATE dbarc03.klassen SET k_zimmer = 4444 WHERE k_id = 30;\cf0 \
+\cf3 DELETE FROM dbarc03.klassen WHERE k_id = 30;\cf0 \
+\pard\pardeftab720
+\cf2 \\end\cf0 \{lstlisting\}\
+\
+\pard\pardeftab720
+\cf4 \\Bold\cf0 \{Statement 3\}\
+\pard\pardeftab720
+\cf2 \\begin\cf0 \{lstlisting\}\cf3 [style=sql]\cf0 \
+\pard\pardeftab720
+\cf3 SELECT * FROM dbarc03.view1;\cf0 \
+\cf3 INSERT INTO dbarc03.view1 VALUES ('peter','muster',2222,'saturn');\cf0 \
+\cf3 UPDATE dbarc03.view1 SET s_name = 'kook' WHERE s_vname = 'thomas';\cf0 \
+\cf3 DELETE FROM dbarc03.view1 WHERE s_vname = 'thomas';\cf0 \
+\pard\pardeftab720
+\cf2 \\end\cf0 \{lstlisting\}\
+Die obigen 3 Statements werden jeweils von 'nutzer01' und 'nutzer02' ausgef\'fchrt.\
+\pard\pardeftab720
+
+\f0\b \cf2 \\subsubsection
+\f1\b0 \cf0 \{Was kann nutzer01 lesen und bearbeiten?\}\
+'nutzer01' kann die ersten beiden Statements ausf\'fchren. Er kann also Daten der beiden Tabellen 'studenten' und 'klassen' auslesen, erg\'e4nzen, ver\'e4ndern und l\'f6schen. Er kann keinerlei Operationen auf der View 'view1' ausf\'fchren. Dies verh\'e4lt sich also wie bei Oracle.\
+
+\f0\b \cf2 \\subsubsection
+\f1\b0 \cf0 \{Was kann nutzer02 lesen und bearbeiten?\}\
+Im Gegensatz zu 'nutzer01' kann 'nutzer02' keinerlei Operationen an den Tabellen 'studenten' und 'klassen' durchf\'fchren. Wie erwartet kann er in Statement 3 die Daten aus der View 'view1' lediglich auslesen. Auch hier verh\'e4lt sich MySQL genauso wie bei Oracle.\
+\
+
+\f0\b \cf2 \\section
+\f1\b0 \cf0 \{Zugriffsrechte: Objekt- und Systemrechte\}\
+\pard\pardeftab720
+\cf2 \\begin\cf0 \{center\}\
+\pard\pardeftab720
+
+\f0\b \cf2 \\includegraphics
+\f1\b0 \cf0 [scale=0.5]\{MySQL_Dependency.png\}\
+\pard\pardeftab720
+\cf2 \\end\cf0 \{center\}\
+\pard\pardeftab720
+\cf4 \\Bold\cf0 \{Berechtigungen unter MySQL\}\cf4 \\newline\cf0 \
+Berechtigungen werden unter MySQL in 4 Stufen klassifiziert:\cf4 \\newline\\newline\cf0 \
+\cf4 \\Bold\cf0 \{Globale Ebene\}\cf4 \\newline\cf0 \
+Globale Rechte gelten f\'fcr alle Datenbanken auf einem bestimmten Server und werden in der Systemtabelle mysql.user gespeichert\cf4 \\newline\cf0 \
+\cf4 \\Bold\cf0 \{Datenbankebene\}\cf4 \\newline\cf0 \
+Datenbankrechte gelten f\'fcr alle Tabellen einer bestimmten Datenbank und werden in der Systemtabelle mysql.db gespeichert\cf4 \\newline\cf0 \
+\cf4 \\Bold\cf0 \{Tabellenebene\}\cf4 \\newline\cf0 \
+Tabellenrechte gelten f\'fcr alle Spalten einer bestimmten Tabelle und werden in der Systemtabelle mysql.tables\cf4 \\_priv\cf0  gespeichert\cf4 \\newline\cf0 \
+\cf4 \\Bold\cf0 \{Spaltenebene\}\cf4 \\newline\cf0 \
+Spaltenrechte gelten f\'fcr einzelne Spalten einer bestimmtem Tabelle und werden in der Systembtabelle mysql.columns\cf4 \\_priv\cf0  gespeichert\
+\cf4 \\newline\\newline\\small\cf0 \{Quelle: 'SQL in a Nutshell' by Kevin E. Klinke, 2.Auflage, S: 307\}\
+\pard\pardeftab720
+
+\f0\b \cf2 \\subsection
+\f1\b0 \cf0 \{Objektrechte\}\
+Um die Objektrechte \'fcberpr\'fcfen zu k\'f6nnen erstellen wir als Benutzer 'scott' eine zweite View namens 'view2'. Wir geben 'nutzer01' select-Rechte f\'fcr diese View.\
+\pard\pardeftab720
+\cf2 \\begin\cf0 \{lstlisting\}\cf3 [style=sql]\cf0 \
+\pard\pardeftab720
+\cf3 CREATE VIEW view2 AS\cf0 \
+\cf3 select s_name, s_vname, k_zimmer, k_server\cf0 \
+\cf3 FROM studenten, klassen\cf0 \
+\cf3 WHERE s_klasse = k_id;\cf0 \
+\
+\cf3 GRANT SELECT ON dbarc03.view2 TO nutzer01@localhost WITH GRANT OPTION;\cf0 \
+\pard\pardeftab720
+\cf2 \\end\cf0 \{lstlisting\}\
+\
+'nutzer01' gibt diese select-Rechte an der View 'view2' nun weiter an 'nutzer02'.\
+\cf2 \\begin\cf0 \{lstlisting\}\cf3 [style=sql]\cf0 \
+\pard\pardeftab720
+\cf3 GRANT SELECT ON dbarc03.view2 TO nutzer02@localhost;\cf0 \
+\pard\pardeftab720
+\cf2 \\end\cf0 \{lstlisting\}\
+\
+'nutzer02' testet, ob er nun das Recht hat Daten aus 'view2' auszulesen.\
+\cf2 \\begin\cf0 \{lstlisting\}\cf3 [style=sql]\cf0 \
+\pard\pardeftab720
+\cf3 SELECT * FROM dbarc03.view2;\cf0 \
+\pard\pardeftab720
+\cf2 \\end\cf0 \{lstlisting\}\
+Erfolgreich.\
+\
+Nun nimmt 'scott' die selec-Rechte an der View 'view2' dem Nutzer 'nutzer01' wieder weg.\
+\cf2 \\begin\cf0 \{lstlisting\}\cf3 [style=sql]\cf0 \
+\pard\pardeftab720
+\cf3 REVOKE SELECT ON dbarc03.view2 FROM nutzer01@localhost;\cf0 \
+\pard\pardeftab720
+\cf2 \\end\cf0 \{lstlisting\}\
+\
+Anschliessend testen wir als 'nutzer02' ob wir immernoch select-Rechte auf 'view2' haben oder ob diese mit dem Entfernen der Rechte von 'nutzer01' ebenfalls erloschen sind. \
+\cf2 \\begin\cf0 \{lstlisting\}\cf3 [style=sql]\cf0 \
+\pard\pardeftab720
+\cf3 SELECT * FROM dbarc03.view2;\cf0 \
+\pard\pardeftab720
+\cf2 \\end\cf0 \{lstlisting\}\
+Immernoch erfolgreich.\
+\pard\pardeftab720
+\cf4 \\newline\\newline\cf0 \
+MySQL verh\'e4lt sich hier grundlegend anders als Oracle. Es gibt zwei Arten einem Nutzer Rechte zu geben. Mit 'WITH GRANT OPTION' oder ohne.\cf4 \\newline\cf0 \
+Ohne 'WITH GRANT OPTION' k\'f6nnen die Rechte nicht weitergegeben werden. Mit 'WITH GRANT OPTION' k\'f6nnen Rechte uneingeschr\'e4nkt weitergegeben werden. Anders als bei Oracle entstehen so keine Abh\'e4ngigkeiten und somit keine Kaskadeneffekte.\
+\
+\pard\pardeftab720
+
+\f0\b \cf2 \\subsection
+\f1\b0 \cf0 \{Systemrechte\}\
+Um die Systemrechte zu \'fcberpr\'fcfen erh\'e4lt Nutzer 'scott' das Recht neue Nutzer zu erstellen.\
+\pard\pardeftab720
+\cf2 \\begin\cf0 \{lstlisting\}\cf3 [style=sql]\cf0 \
+\pard\pardeftab720
+\cf3 GRANT CREATE USER ON *.* TO scott@localhost WITH GRANT OPTION;\cf0 \
+\pard\pardeftab720
+\cf2 \\end\cf0 \{lstlisting\}\
+\
+'scott' gibt dieses Recht anschliessen an 'nutzer01' weiter.\
+\cf2 \\begin\cf0 \{lstlisting\}\cf3 [style=sql]\cf0 \
+\pard\pardeftab720
+\cf3 GRANT CREATE USER ON *.* TO nutzer01@localhost;\cf0 \
+\pard\pardeftab720
+\cf2 \\end\cf0 \{lstlisting\}\
+\
+Nun entzieht der Root 'scott' das Recht neue Nutzer zu erstellen wieder.\
+\cf2 \\begin\cf0 \{lstlisting\}\cf3 [style=sql]\cf0 \
+\pard\pardeftab720
+\cf3 REVOKE CREATE USER ON *.* FROM scott@localhost;\cf0 \
+\pard\pardeftab720
+\cf2 \\end\cf0 \{lstlisting\}\
+\
+'nutzer01' testet ob er immernoch neue Nutzer erstellen kann.\
+\cf2 \\begin\cf0 \{lstlisting\}\cf3 [style=sql]\cf0 \
+\pard\pardeftab720
+\cf3 CREATE USER test@localhost IDENTIFIED BY 'test';\cf0 \
+\pard\pardeftab720
+\cf2 \\end\cf0 \{lstlisting\}\
+Erfolgreich.\
+\pard\pardeftab720
+\cf4 \\newline\\newline\cf0 \
+Auch hier entsteht keine Kaskade. In MySQL verhalten sich Objekt- und Systemrechte identisch.\
+\
+\pard\pardeftab720
+
+\f0\b \cf2 \\section
+\f1\b0 \cf0 \{Views\}\
+
+\f0\b \cf2 \\subsection
+\f1\b0 \cf0 \{Rechte von Views\}\
+Zuerst erh\'e4lt 'nutzer01' das Recht neue Views zu erstellen.\
+\pard\pardeftab720
+\cf2 \\begin\cf0 \{lstlisting\}\cf3 [style=sql]\cf0 \
+\pard\pardeftab720
+\cf3 GRANT CREATE VIEW ON `dbarc03` .* TO nutzer01@localhost;\cf0 \
+\pard\pardeftab720
+\cf2 \\end\cf0 \{lstlisting\}\
+\
+'nutzer01' erstellt hierauf die View 'cheat\cf4 \\_view'\cf0  auf die Daten in der Tabelle 'studenten'.\
+\cf2 \\begin\cf0 \{lstlisting\}\cf3 [style=sql]\cf0 \
+\pard\pardeftab720
+\cf3 CREATE VIEW cheat_view AS\cf0 \
+\cf3 SELECT * FROM dbarc03.studenten;\cf0 \
+\pard\pardeftab720
+\cf2 \\end\cf0 \{lstlisting\}\
+Erfolgreich.\
+\
+'nutzer01' gibt nun 'nutzer02' das select-Recht f\'fcr die View 'cheat\cf4 \\_view'.\cf0 \
+\cf2 \\begin\cf0 \{lstlisting\}\cf3 [style=sql]\cf0 \
+\pard\pardeftab720
+\cf3 GRANT SELECT ON cheat_view TO nutzer02@localhost;\cf0 \
+\pard\pardeftab720
+\cf2 \\end\cf0 \{lstlisting\}\
+Error Code: 1142. SELECT command denied to user 'nutzer01'@'localhost' for table 'cheat\cf4 \\_view'\\newline\\newline\cf0 \
+In MySQL wird die View, welche 'nutzer01' erstellt hat, nicht in einem Tablespace gespeichert, welcher 'nutzer01' geh\'f6rt. Folglich hat er keinerlei Rechte auf der von ihm erstellten View und kann diese so nat\'fcrlich auch nicht weitergeben.\
+\
+\pard\pardeftab720
+
+\f0\b \cf2 \\subsection
+\f1\b0 \cf0 \{DDL-\'c4nderungen an den Basistabellen\}\
+Erst \'fcberpr\'fcfen wir wie sich die View 'view1' verh\'e4lt, wenn der Nutzer 'scott' die Tabelle 'studenten' um eine Spalte 'birthday' erweitert.\
+\pard\pardeftab720
+\cf2 \\begin\cf0 \{lstlisting\}\cf3 [style=sql]\cf0 \
+\pard\pardeftab720
+\cf3 ALTER TABLE studenten ADD birthday TIMESTAMP;\cf0 \
+\pard\pardeftab720
+\cf2 \\end\cf0 \{lstlisting\}\
+\
+\cf2 \\begin\cf0 \{lstlisting\}\cf3 [style=sql]\cf0 \
+\pard\pardeftab720
+\cf3 SELECT * FROM view1;\cf0 \
+\pard\pardeftab720
+\cf2 \\end\cf0 \{lstlisting\}\
+Es entstehen keinerlei Probleme, da 'view1' durch die neu Spalte nicht beeintr\'e4chtigt wird.\cf4 \\newline\\newline\cf0 \
+\
+Als n\'e4chstes l\'f6scht 'scott' die soeben erstellte Spalte 'birthday' wieder aus der Tabelle 'studenten', zusammen mit der vorhandenen Spalte 's\cf4 \\_name'.\cf0 \
+\cf2 \\begin\cf0 \{lstlisting\}\cf3 [style=sql]\cf0 \
+\pard\pardeftab720
+\cf3 ALTER TABLE studenten DROP COLUMN birthday;\cf0 \
+\cf3 ALTER TABLE studenten DROP COLUMN s_name;\cf0 \
+\pard\pardeftab720
+\cf2 \\end\cf0 \{lstlisting\}\
+\
+\cf2 \\begin\cf0 \{lstlisting\}\cf3 [style=sql]\cf0 \
+\pard\pardeftab720
+\cf3 SELECT * FROM view1;\cf0 \
+\pard\pardeftab720
+\cf2 \\end\cf0 \{lstlisting\}\
+Error Code: 1356. View 'dbarc03.view1' references invalid table(s) or column(s) or function(s) or definer/invoker of view lack rights to use them\cf4 \\newline\\newline\cf0 \
+Wie man aus der Fehlermeldung erkennen kann, referenziert 'view1' immernoch auf die soeben gel\'f6schte Spalte 's\cf4 \\_name'.\\newline\\newline\cf0 \
+\
+Wir f\'fcgen die Spalte 's\cf4 \\_name'\cf0  wieder hinzu um so die View 'view1' wieder zu 'reparieren'.\
+\cf2 \\begin\cf0 \{lstlisting\}\cf3 [style=sql]\cf0 \
+\pard\pardeftab720
+\cf3 ALTER TABLE studenten ADD s_name VARCHAR(10);\cf0 \
+\pard\pardeftab720
+\cf2 \\end\cf0 \{lstlisting\}\
+\
+\pard\pardeftab720
+
+\f0\b \cf2 \\subsection
+\f1\b0 \cf0 \{Updatable Views\}\
+Nun wollen wir \'fcberpr\'fcfen was passiert, wenn man versucht \'fcber eine View die Daten der Tabelle zu ver\'e4ndern.\cf4 \\newline\\newline\cf0 \
+\
+Nutzer 'scott' erstellt hierf\'fcr eine neue View 'view\cf4 \\_distinct'.\cf0  Anschliessend versucht er die Daten der Spalte 's\cf4 \\_vname'\cf0  via update-Statement zu ver\'e4ndern.\
+\pard\pardeftab720
+\cf2 \\begin\cf0 \{lstlisting\}\cf3 [style=sql]\cf0 \
+\pard\pardeftab720
+\cf3 CREATE VIEW view_distinct AS\cf0 \
+\cf3 SELECT DISTINCT s_vname\cf0 \
+\cf3 FROM studenten;\cf0 \
+\
+\cf3 UPDATE view_distinct SET s_vname='ana' WHERE s_vname='anna';\cf0 \
+\pard\pardeftab720
+\cf2 \\end\cf0 \{lstlisting\}\
+Error Code: 1288. The target table view\cf4 \\_distinct\cf0  of the UPDATE is not updatable\cf4 \\newline\\newline\cf0 \
+MySQL verh\'e4lt sich genauso wie Oracle.\cf4 \\newline\\newline\cf0 \
+\
+Anschliessend erstellt 'scott' eine weitere View 'view\cf4 \\_all',\cf0  diesmal ohne distinct.\
+\cf2 \\begin\cf0 \{lstlisting\}\cf3 [style=sql]\cf0 \
+\pard\pardeftab720
+\cf3 CREATE VIEW view_all AS\cf0 \
+\cf3 SELECT *\cf0 \
+\cf3 FROM studenten\cf0 \
+\cf3 INNER JOIN klassen ON s_klasse=k_id;\cf0 \
+\pard\pardeftab720
+\cf2 \\end\cf0 \{lstlisting\}\
+'scott' versucht nun die Daten der Tabelle \'fcber ein update-Statement auf 'view\cf4 \\_all'\cf0  zu ver\'e4ndern.\
+\cf2 \\begin\cf0 \{lstlisting\}\cf3 [style=sql]\cf0 \
+\pard\pardeftab720
+\cf3 SELECT * FROM view_all;\cf0 \
+\
+\cf3 UPDATE view_all SET s_name='muster' WHERE s_id=101;\cf0 \
+\pard\pardeftab720
+\cf2 \\end\cf0 \{lstlisting\}\
+Dies gelingt, wie bei Oracle.\
+\
+\cf2 \\begin\cf0 \{lstlisting\}\cf3 [style=sql]\cf0 \
+\pard\pardeftab720
+\cf3 UPDATE view_all SET k_bezeichnung='test' WHERE k_id=10;\cf0 \
+\pard\pardeftab720
+\cf2 \\end\cf0 \{lstlisting\}\
+\
+\pard\pardeftab720
+
+\f0\b \cf2 \\subsection
+\f1\b0 \cf0 \{WITH CHECK OPTION\}\
+Die \cf4 \\Bold\cf0 \{WITH CHECK OPTION\}-Klausel kann f\'fcr eine ver\'e4nderbare View benutzt werden, um Einf\'fcgungen oder \'c4nderungen an Zeilen zu verhindern, welche die \cf4 \\Bold\cf0 \{WHERE\}-Klausel des SELECT-Statements nicht erf\'fcllen.\
+In einer \cf4 \\Bold\cf0 \{WITH CHECK OPTION\}-Klausel einer ver\'e4nderbaren View legen die Schl\'fcsselw\'f6rter \cf4 \\Bold\cf0 \{LOCAL\} und \cf4 \\Bold\cf0 \{CASCADED\} den Rahmen der \'dcberpr\'fcfungen fest, wenn die View auf Grundlage einer anderen View definiert wurde. Das Schl\'fcsselwort \cf4 \\Bold\cf0 \{LOCAL\} schr\'e4nkt die \cf4 \\Bold\cf0 \{CHECK OPTION\} auf die View ein, die gerade definiert wird, w\'e4hrend \cf4 \\Bold\cf0 \{CASCADED\} daf\'fcr sorgt, dass sich die Pr\'fcfungen auch auf die zugrunde liegenden Views erstrecken. Wenn keines der beiden Schl\'fcsselw\'f6rter angegeben ist, ist \cf4 \\Bold\cf0 \{CASCADED\} der Standard.\cf4 \\newline\\newline\cf0 \
+\pard\pardeftab720
+\cf4 \\small\cf0 \{Quelle: http://dev.mysql.com/doc/refman/5.1/de/create-view.html\}\cf4 \\newline\\newline\cf0 \
+\
+Nun wollen wir das Verhalten von \cf4 \\Bold\cf0 \{WITH CHECK OPTION\} in MySQL untersuchen.\
+\pard\pardeftab720
+\cf2 \\begin\cf0 \{lstlisting\}\cf3 [style=sql]\cf0 \
+\pard\pardeftab720
+\cf3 CREATE VIEW v1 AS\cf0 \
+\cf3 SELECT *\cf0 \
+\cf3 FROM studenten\cf0 \
+\cf3 WHERE s_klasse = 20 WITH CHECK OPTION;\cf0 \
+\pard\pardeftab720
+\cf2 \\end\cf0 \{lstlisting\}\
+\
+\cf2 \\begin\cf0 \{lstlisting\}\cf3 [style=sql]\cf0 \
+\pard\pardeftab720
+\cf3 CREATE VIEW v2 AS\cf0 \
+\cf3 SELECT *\cf0 \
+\cf3 FROM v1\cf0 \
+\cf3 WHERE s_tel < 40000\cf0 \
+\pard\pardeftab720
+\cf2 \\end\cf0 \{lstlisting\}\
+\
+\cf2 \\begin\cf0 \{lstlisting\}\cf3 [style=sql]\cf0 \
+\pard\pardeftab720
+\cf3 INSERT INTO v2 VALUES (200, 'muster', 'peter', 40001, 2000, 20);\cf0 \
+\cf3 INSERT INTO v2 VALUES (201, 'muster', 'peter', 40001, 2000, 10);\cf0 \
+\pard\pardeftab720
+\cf2 \\end\cf0 \{lstlisting\}\
+Erfolgreich.\
+\
+\cf2 \\begin\cf0 \{lstlisting\}\cf3 [style=sql]\cf0 \
+\pard\pardeftab720
+\cf3 CREATE VIEW v3 AS\cf0 \
+\cf3 SELECT *\cf0 \
+\cf3 FROM v2\cf0 \
+\cf3 WHERE s_vname='peter' WITH CHECK OPTION;\cf0 \
+\pard\pardeftab720
+\cf2 \\end\cf0 \{lstlisting\}\
+\
+\cf2 \\begin\cf0 \{lstlisting\}\cf3 [style=sql]\cf0 \
+\pard\pardeftab720
+\cf3 INSERT INTO v3 VALUES (202, 'muster', 'thomas', 30000, 2000, 20);\cf0 \
+\pard\pardeftab720
+\cf2 \\end\cf0 \{lstlisting\}\
+Error Code: 1369. CHECK OPTION failed 'dbarc03.v3'\
+\
+\cf2 \\begin\cf0 \{lstlisting\}\cf3 [style=sql]\cf0 \
+\pard\pardeftab720
+\cf3 INSERT INTO v3 VALUES (202, 'muster', 'peter', 30000, 2000, 20);\cf0 \
+\pard\pardeftab720
+\cf2 \\end\cf0 \{lstlisting\}\
+Error Code: 1369. CHECK OPTION failed 'dbarc03.v3'\
+\
+\cf2 \\begin\cf0 \{lstlisting\}\cf3 [style=sql]\cf0 \
+\pard\pardeftab720
+\cf3 INSERT INTO v3 VALUES (203, 'muster', 'thomas', 30000, 2000, 10);\cf0 \
+\pard\pardeftab720
+\cf2 \\end\cf0 \{lstlisting\}\
+Error Code: 1369. CHECK OPTION failed 'dbarc03.v3'\
+\
+\cf2 \\begin\cf0 \{lstlisting\}\cf3 [style=sql]\cf0 \
+\pard\pardeftab720
+\cf3 INSERT INTO v3 VALUES (204, 'muster', 'thomas', 40000, 2000, 20);\cf0 \
+\pard\pardeftab720
+\cf2 \\end\cf0 \{lstlisting\}\
+Error Code: 1369. CHECK OPTION failed 'dbarc03.v3'\cf4 \\newline\\newline\cf0 \
+\
+Wenn man unter MySQL mit aufeinander aufbauenden Views arbeiten will, muss man darauf achten, dass wenn man eine View mit \cf4 \\Bold\cf0 \{WITH CHECK OPTION\} erstellt, dass die dar\'fcber liegenden Views ebenfalls \cf4 \\Bold\cf0 \{WITH CHECK OPTION\} tr\'e4gt, ansonten kann es vorkommen, dass die Datenbank nicht wie erwartet reagiert.\cf4 \\newline\\newline\cf0 \
+\
+\pard\pardeftab720
+\cf4 \\Bold\cf0 \{WITH CASCADED CHECK OPTION\} verh\'e4lt sich wie zu erwarten war.\cf4 \\newline\\newline\cf0 \
+\
+Wenn nach einer View mit \cf4 \\Bold\cf0 \{WITH CHECK OPTION\} eine View ohne folgt, kann diese die \cf4 \\Bold\cf0 \{CHECK OPTION\} der vorherigen View aushebeln. Ohne \cf4 \\Bold\cf0 \{WITH CHECK OPTION\} ist die Einstellung der Basistabelle relevant.\
+\
+\pard\pardeftab720
+
+\f0\b \cf2 \\section
+\f1\b0 \cf0 \{Standard SQL\}\
+Wir wollen nun sehen was der SQL Standard 1999 eigentlich vorsehen w\'fcrde und ob Oracle, MySQL und MS SQL davon abweichen oder nicht.\
+
+\f0\b \cf2 \\subsection
+\f1\b0 \cf0 \{Zugriffssteuerng mit Benutzern und Rollen\}\
+Hier weicht MySQL vom Standard ab, denn der SQL Standard sieht bei der Benutzersteuerung ein Rollenkonzept vor wie es sowohl Oracle, als auch MS SQL implementiert haben.\
+
+\f0\b \cf2 \\subsection
+\f1\b0 \cf0 \{Zugriffsrechte: Objekt- und Systemrechte\}\
+
+\f0\b \cf2 \\subsubsection
+\f1\b0 \cf0 \{WITH GRAN OPTION\}\
+Seit dem SQL Standard von 1992 ist \cf4 \\Bold\cf0 \{WITH GRANT OPTION\} ein fester Bestandteil des Standards. Alle drei Datenbank-Systeme unterst\'fctzen es.\
+
+\f0\b \cf2 \\subsubsection
+\f1\b0 \cf0 \{WITH ADMIN OPTION\}\
+Geh\'f6rt seit 1999 zum SQL Standard. Im Gegensatz zu \cf4 \\Bold\cf0 \{WITH GRANT OPTION\} wird es allerdings nur von Oracle unterst\'fctzt.\
+
+\f0\b \cf2 \\subsubsection
+\f1\b0 \cf0 \{REVOKE\}\
+Seit 1992 ist \cf4 \\Bold\cf0 \{REVOKE\} Bestandteil des SQL Standards.\cf4 \\newline\\newline\cf0 \
+\pard\pardeftab720
+\cf4 \\Bold\cf0 \{REVOKE\} soll laut Standard die beiden Optionen \cf4 \\Bold\cf0 \{RESTRICT\} und \cf4 \\Bold\cf0 \{CASCADE\} unterst\'fctzen. \cf4 \\Bold\cf0 \{RESTRICT\} scheint allerdings von keinem der drei Datenbank-Systeme unterst\'fctzt zu werden. Auch was \cf4 \\Bold\cf0 \{CASCADE\} angeht, weichen alle Systeme vom Standard ab.\cf4 \\newline\\newline\cf0 \
+Bei MS SQL muss bei einem \cf4 \\Bold\cf0 \{REVOKE\} die Option \cf4 \\Bold\cf0 \{CASCADE\} angegeben werden, falls die Rechte mit \cf4 \\Bold\cf0 \{WITH GRANT OPTION\} gegeben wurden.\cf4 \\newline\\newline\cf0 \
+Oracle entfernt Rechte standardm\'e4ssig kaskadierend wenn sie mit \cf4 \\Bold\cf0 \{WITH GRANT OPTION\} vergeben wurden. Bei \cf4 \\Bold\cf0 \{WITH ADMIN OPTION\} werden sie allerdings nicht kaskadierend entfernt.\cf4 \\newline\\newline\cf0 \
+MySQL stellt keine M\'f6glichkeit bereit um Rechte kaskadierend entfernen zu k\'f6nnen.\
+\pard\pardeftab720
+
+\f0\b \cf2 \\subsection
+\f1\b0 \cf0 \{Views\}\
+
+\f0\b \cf2 \\subsubsection
+\f1\b0 \cf0 \{Rechte auf Views\}\
+Laut SQL Standard von 1999 kann ein Benutzer keine h\'f6heren Rechte auf einer View erhalten als er sie auf der Basistabelle hat. Ausnahmsweise verhandeln sich alle drei Datenbank-Systeme gem\'e4ss des Standards.\
+
+\f0\b \cf2 \\subsubsection
+\f1\b0 \cf0 \{Updateable Views\}\
+Seit 1992 gibt der SQL Standard vor wann View wie ver\'e4nderbar sind. Alle Datenbank-Systeme verhalten sich diesem Standard entsprechend. Bei Oracle kann eine Zeile der View nur ver\'e4ndert werden, wenn die zu ver\'e4ndernde Basistabelle \cf4 \\Bold\cf0 \{key-preserved\} ist.\
+
+\f0\b \cf2 \\subsubsection
+\f1\b0 \cf0 \{WITH CHECK OPTION\}\
+Im SQL Standard von 1992 wurde der Parameter \cf4 \\Bold\cf0 \{WITH CHECK OPTION\} das erste Mal definiert. Er wird von allen drei Systemen der Definition gem\'e4ss umgesetzt. Neben \cf4 \\Bold\cf0 \{WITH CHECK OPTION\} gibt es im Standard noch zwei weitere Parameter namens \cf4 \\Bold\cf0 \{LOCAL\} und \cf4 \\Bold\cf0 \{CASCADED\}. Diese werden allerdings nur von MySQL unterst\'fctzt.\
+\
+
+\f0\b \cf2 \\section
+\f1\b0 \cf0 \{Reflexion\}\
+Es ist erstaunlich zu sehen, dass es seit \'fcber 20 Jahren einen g\'fcltigen SQL Standard gibt und dieser von keinem der drei getesteten Datenbank-Systemen vollkommen ber\'fccksichtigt wird. Jedes System interpretiert Dinge aus dem Standard anders oder l\'e4sst sie komplett aussen vor. (z.B. Fehlende Rollen bei MySQL)\cf4 \\newline\cf0 \
+Dies f\'fchrt zu der Erkenntnis, dass man sich nicht einfach auf den SQL Standard berufen kann, sondern sich je nach System selbst grundlegende Dinge wie unterst\'fctzte Datentypen unterscheiden k\'f6nnen.\
+}
