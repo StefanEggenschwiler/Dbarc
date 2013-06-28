@@ -101,7 +101,7 @@
 \Large{Ausarbeitung 2: Zugriffssteuerung und Views}\\
 }
 \author{Daniel Gürber \cr Stefan Eggenschwiler}
-\date{21.06.2013}
+\date{28.06.2013}
 
 % hier beginnt das Dokument
 \begin{document}
@@ -325,7 +325,7 @@ SELECT * FROM scott.studenten
 \end{lstlisting}
 Nutzer01 versucht eine View auf die geschützte Tabelle zu erstellen, dieses Statement bricht mit folgender Begründung ab:\\
 ORA-01031: Nicht ausreichende Berechtigungen\\
-
+\newpage
 Als system:
 \begin{lstlisting}[style=sql]
 GRANT CREATE ANY VIEW TO nutzer01;
@@ -520,7 +520,7 @@ GRANT CREATE TABLE TO scott;
 GRANT CONTROL ON SCHEMA :: dbo TO scott;
 \end{lstlisting}
 Es werden die User scott, nutzer01 und nutzer02 analog zu der Durchführung in Oracle erstellt, CREATE SESSION Rechte sind in MS SQL nicht nötig um sich anzumelden. Scott erhält für das folgende Vorgehen Rechte um Rollen, Tabellen und Views zu erstellen, zusätzlich benötigt er noch Rechte um das Schema dbo zu verwalten.
-
+\newpage
 \section{Zugriffssteuerung mit User und Rollen}
 \subsection{Tabellen erzeugen}
 Als scott:
@@ -567,7 +567,7 @@ CREATE ROLE view1_verwalter;
 CREATE ROLE view1_nutzer;
 \end{lstlisting}
 Scott erstellt die Rollen view1\_verwalter und view1\_nutzer.
-
+\newpage
 \subsection{Den Rollen Rechte zuweisen}
 Als scott:
 \begin{lstlisting}[style=sql]
@@ -648,7 +648,7 @@ Als nutzer02:
 SELECT * FROM scott view2;
 \end{lstlisting}
 Nutzer02 kann die Daten aus view2 erfolgreich weitergeben.
-
+\newpage
 Als scott:
 \begin{lstlisting}[style=sql]
 REVOKE SELECT ON view2 FROM nutzer01 CASCADE;
@@ -691,14 +691,13 @@ GRANT CREATE VIEW TO nutzer01;
 GRANT ALTER ON SCHEMA :: dbo TO nutzer01;
 \end{lstlisting}
 Nutzer01 wird das Recht Views zu erstellen erteilt, gleichzeitig benötigt er auch das Recht, das Schema dbo zu ändern.
-
+\newpage
 Als nutzer01:
 \begin{lstlisting}[style=sql]
 CREATE VIEW cheat_view AS
 SELECT * FROM studenten;
 \end{lstlisting}
 Nutzer01 kann die View nun erstellen, was unter Oracle nicht ging, dies liegt an der ALTER Berechtigung auf dbo.
-
 Als nutzer01:
 \begin{lstlisting}[style=sql]
 SELECT * FROM cheat_view
@@ -740,7 +739,7 @@ SELECT * FROM nutzer01.cheat_view
 Nutzer02 versucht nun die Daten auszulesen, was mit folgender Meldung abbricht:\\
 The SELECT permission was denied on the object 'studenten', database 'dbarc03', schema 'dbo'.\\
 Diese Meldung zeigt eindeutig, das die Rechte auf dbo fehlen, und nicht auf nutzer01, auch bei MS SQL können Views also nicht verwendet werden, um Berechtigungen unerlaubt weiterzugeben.
-
+\newpage
 \subsection{DDL-Änderungen an den Basistabellen}
 Alle Statements in folgendem Absatz werden als scott durchgeführt.
 \begin{lstlisting}[style=sql]
@@ -795,6 +794,7 @@ SELECT *
 FROM studenten
 INNER JOIN klassen ON s_klasse=k_id;
 \end{lstlisting}
+\newpage
 Scott erstellt nun eine View view\_all die alle Daten der Studenten und ihren Klassen anzeigt.
 
 \begin{lstlisting}[style=sql]
@@ -957,7 +957,7 @@ INSERT INTO dbarc03.klassen VALUES (30, 'ia02', 1111, 'uranus');
 UPDATE dbarc03.klassen SET k_zimmer = 4444 WHERE k_id = 30;
 DELETE FROM dbarc03.klassen WHERE k_id = 30;
 \end{lstlisting}
-
+\newpage
 \Bold{Statement 3}
 \begin{lstlisting}[style=sql]
 SELECT * FROM dbarc03.view1;
@@ -1021,7 +1021,7 @@ Immernoch erfolgreich.
 \newline\newline
 MySQL verhält sich hier grundlegend anders als Oracle. Es gibt zwei Arten einem Nutzer Rechte zu geben. Mit 'WITH GRANT OPTION' oder ohne.\newline
 Ohne 'WITH GRANT OPTION' können die Rechte nicht weitergegeben werden. Mit 'WITH GRANT OPTION' können Rechte uneingeschränkt weitergegeben werden. Anders als bei Oracle entstehen so keine Abhängigkeiten und somit keine Kaskadeneffekte.
-
+\newpage
 \subsection{Systemrechte}
 Um die Systemrechte zu überprüfen erhält Nutzer 'scott' das Recht neue Nutzer zu erstellen.
 \begin{lstlisting}[style=sql]
@@ -1066,7 +1066,7 @@ GRANT SELECT ON cheat_view TO nutzer02@localhost;
 \end{lstlisting}
 Error Code: 1142. SELECT command denied to user 'nutzer01'@'localhost' for table 'cheat\_view'\newline\newline
 In MySQL wird die View, welche 'nutzer01' erstellt hat, nicht in einem Tablespace gespeichert, welcher 'nutzer01' gehört. Folglich hat er keinerlei Rechte auf der von ihm erstellten View und kann diese so natürlich auch nicht weitergeben.
-
+\newpage
 \subsection{DDL-Änderungen an den Basistabellen}
 Erst überprüfen wir wie sich die View 'view1' verhält, wenn der Nutzer 'scott' die Tabelle 'studenten' um eine Spalte 'birthday' erweitert.
 \begin{lstlisting}[style=sql]
@@ -1170,7 +1170,7 @@ Error Code: 1369. CHECK OPTION failed 'dbarc03.v3'
 INSERT INTO v3 VALUES (202, 'muster', 'peter', 30000, 2000, 20);
 \end{lstlisting}
 Error Code: 1369. CHECK OPTION failed 'dbarc03.v3'
-
+\newpage
 \begin{lstlisting}[style=sql]
 INSERT INTO v3 VALUES (203, 'muster', 'thomas', 30000, 2000, 10);
 \end{lstlisting}
@@ -1210,7 +1210,7 @@ Seit 1992 gibt der SQL Standard vor wann View wie veränderbar sind. Alle Datenb
 \subsubsection{WITH CHECK OPTION}
 Im SQL Standard von 1992 wurde der Parameter \Bold{WITH CHECK OPTION} das erste Mal definiert. Er wird von allen drei Systemen der Definition gemäss umgesetzt. Neben \Bold{WITH CHECK OPTION} gibt es im Standard noch zwei weitere Parameter namens \Bold{LOCAL} und \Bold{CASCADED}. Diese werden allerdings nur von MySQL unterstützt.
 
-\section{Reflexion}
+\chapter{Reflexion}
 Es ist erstaunlich zu sehen, dass es seit über 20 Jahren einen gültigen SQL Standard gibt und dieser von keinem der drei getesteten Datenbank-Systemen vollkommen berücksichtigt wird. Jedes System interpretiert Dinge aus dem Standard anders oder lässt sie komplett aussen vor. (z.B. Fehlende Rollen bei MySQL)\newline
 Dies führt zu der Erkenntnis, dass man sich nicht einfach auf den SQL Standard berufen kann, sondern sich je nach System selbst grundlegende Dinge wie unterstützte Datentypen unterscheiden können, dies ist auch für Programmierer relevant, die das System zwar nur verwenden und nicht administrieren, aber doch wissen müssen wie sich die das System speziell verhält.
 
